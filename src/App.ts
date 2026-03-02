@@ -48,6 +48,7 @@ export class App {
   private state: AppContext;
   private pendingDeepLinkCountry: string | null = null;
   private pendingDeepLinkExpanded = false;
+  private pendingStoryCode: string | null = null;
 
   private panelLayout: PanelLayoutManager;
   private dataLoader: DataLoaderManager;
@@ -435,6 +436,11 @@ export class App {
     const initState = parseMapUrlState(window.location.search, this.state.mapLayers);
     this.pendingDeepLinkCountry = initState.country ?? null;
     this.pendingDeepLinkExpanded = initState.expanded === true;
+    const earlyParams = new URLSearchParams(window.location.search);
+    const storyC = earlyParams.get('c');
+    if (storyC && /^[A-Z]{2}$/i.test(storyC.trim())) {
+      this.pendingStoryCode = storyC.trim().toUpperCase();
+    }
     this.eventHandlers.setupUrlStateSync();
 
     this.state.countryBriefPage?.onStateChange?.(() => {
@@ -499,8 +505,9 @@ export class App {
     const DEEP_LINK_INITIAL_DELAY_MS = 2000;
 
     // Check for story deep link: /story?c=UA&t=ciianalysis
-    if (url.pathname === '/story' || url.searchParams.has('c')) {
-      const countryCode = url.searchParams.get('c');
+    const countryCode = this.pendingStoryCode ?? url.searchParams.get('c');
+    this.pendingStoryCode = null;
+    if (url.pathname === '/story' || countryCode) {
       if (countryCode) {
         trackDeeplinkOpened('story', countryCode);
         const countryName = getCountryNameByCode(countryCode.toUpperCase()) || countryCode;
