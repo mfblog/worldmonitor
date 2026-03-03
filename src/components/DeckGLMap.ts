@@ -376,8 +376,11 @@ export class DeckGLMap {
   private lastPipelineHighlightSignature = '';
   private debouncedRebuildLayers: (() => void) & { cancel(): void };
   private debouncedFetchBases: (() => void) & { cancel(): void };
+  private debouncedFetchAircraft: (() => void) & { cancel(): void };
   private rafUpdateLayers: (() => void) & { cancel(): void };
   private moveTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private lastAircraftFetchCenter: [number, number] | null = null;
+  private lastAircraftFetchZoom = -1;
 
   constructor(container: HTMLElement, initialState: DeckMapState) {
     this.container = container;
@@ -4058,7 +4061,10 @@ export class DeckGLMap {
   private manageAircraftTimer(enabled: boolean): void {
     if (enabled) {
       if (!this.aircraftFetchTimer) {
-        this.aircraftFetchTimer = setInterval(() => this.fetchViewportAircraft(), 20_000);
+        this.aircraftFetchTimer = setInterval(() => {
+          this.lastAircraftFetchCenter = null; // force refresh on poll
+          this.fetchViewportAircraft();
+        }, 20_000);
         this.debouncedFetchAircraft();
       }
     } else {
@@ -4068,6 +4074,18 @@ export class DeckGLMap {
       }
       this.aircraftPositions = [];
     }
+  }
+
+  private hasAircraftViewportChanged(): boolean {
+    if (!this.maplibreMap) return false;
+    if (!this.lastAircraftFetchCenter) return true;
+    const center = this.maplibreMap.getCenter();
+    const zoom = this.maplibreMap.getZoom();
+    if (Math.abs(zoom - this.lastAircraftFetchZoom) >= 1) return true;
+    const [prevLng, prevLat] = this.lastAircraftFetchCenter;
+    // Threshold scales with zoom — higher zoom = smaller movement triggers fetch
+    const threshold = Math.max(0.1, 2 / Math.pow(2, Math.max(0, zoom - 3)));
+    return Math.abs(center.lat - prevLat) > threshold || Math.abs(center.lng - prevLng) > threshold;
   }
 
   private fetchViewportAircraft(): void {
@@ -4081,6 +4099,7 @@ export class DeckGLMap {
       }
       return;
     }
+    if (!this.hasAircraftViewportChanged()) return;
     const bounds = this.maplibreMap.getBounds();
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
@@ -4090,6 +4109,11 @@ export class DeckGLMap {
     }).then((positions) => {
       this.aircraftPositions = positions;
       this.onAircraftPositionsUpdate?.(positions);
+      const center = this.maplibreMap?.getCenter();
+      if (center) {
+        this.lastAircraftFetchCenter = [center.lng, center.lat];
+        this.lastAircraftFetchZoom = this.maplibreMap!.getZoom();
+      }
       this.render();
     }).catch((err) => {
       console.error('[aircraft] fetch error', err);
@@ -4694,6 +4718,7 @@ export class DeckGLMap {
   public destroy(): void {
     this.debouncedRebuildLayers.cancel();
     this.debouncedFetchBases.cancel();
+    this.debouncedFetchAircraft.cancel();
     this.rafUpdateLayers.cancel();
 
     if (this.moveTimeoutId) {

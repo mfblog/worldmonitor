@@ -5,6 +5,7 @@ import type {
     AviationNewsItem,
 } from '../../../../src/generated/server/worldmonitor/aviation/v1/service_server';
 import { cachedFetchJson } from '../../../_shared/redis';
+import { CHROME_UA } from '../../../_shared/constants';
 
 const CACHE_TTL = 900; // 15 minutes
 
@@ -14,10 +15,6 @@ const AVIATION_RSS_FEEDS = [
     { url: 'https://aerotime.aero/feed', name: 'AeroTime' },
     { url: 'https://thepointsguy.com/feed/', name: 'The Points Guy' },
 ];
-
-const RSS_PROXY_BASE = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}/api/rss-proxy`
-    : 'http://localhost:3000/api/rss-proxy';
 
 interface RssItem {
     title?: string;
@@ -50,9 +47,14 @@ function matchesEntities(text: string, entities: string[]): string[] {
 }
 
 async function fetchFeed(feedUrl: string, sourceName: string): Promise<RssItem[]> {
-    const proxyUrl = `${RSS_PROXY_BASE}?url=${encodeURIComponent(feedUrl)}`;
     try {
-        const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(8_000) });
+        const resp = await fetch(feedUrl, {
+            headers: {
+                'User-Agent': CHROME_UA,
+                'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+            },
+            signal: AbortSignal.timeout(8_000),
+        });
         if (!resp.ok) return [];
         const xml = await resp.text();
         return parseRssItems(xml, sourceName);
