@@ -1,10 +1,12 @@
 /**
  * MapContainer - Conditional map renderer
- * Renders DeckGLMap (WebGL) on desktop, fallback to D3/SVG MapComponent on mobile
+ * Renders DeckGLMap (WebGL) on desktop, fallback to D3/SVG MapComponent on mobile.
+ * Supports an optional 3D globe mode (globe.gl) selectable from Settings.
  */
 import { isMobileDevice } from '@/utils';
 import { MapComponent } from './Map';
 import { DeckGLMap, type DeckMapView, type CountryClickPayload } from './DeckGLMap';
+import { GlobeMap } from './GlobeMap';
 import type {
   MapLayers,
   Hotspot,
@@ -71,16 +73,19 @@ export class MapContainer {
   private isMobile: boolean;
   private deckGLMap: DeckGLMap | null = null;
   private svgMap: MapComponent | null = null;
+  private globeMap: GlobeMap | null = null;
   private initialState: MapContainerState;
   private useDeckGL: boolean;
+  private useGlobe: boolean;
 
-  constructor(container: HTMLElement, initialState: MapContainerState) {
+  constructor(container: HTMLElement, initialState: MapContainerState, preferGlobe = false) {
     this.container = container;
     this.initialState = initialState;
     this.isMobile = isMobileDevice();
+    this.useGlobe = preferGlobe && this.hasWebGLSupport();
 
     // Use deck.gl on desktop with WebGL support, SVG on mobile
-    this.useDeckGL = this.shouldUseDeckGL();
+    this.useDeckGL = !this.useGlobe && this.shouldUseDeckGL();
 
     this.init();
   }
@@ -119,7 +124,10 @@ export class MapContainer {
   }
 
   private init(): void {
-    if (this.useDeckGL) {
+    if (this.useGlobe) {
+      console.log('[MapContainer] Initializing 3D globe (globe.gl mode)');
+      this.globeMap = new GlobeMap(this.container, this.initialState);
+    } else if (this.useDeckGL) {
       console.log('[MapContainer] Initializing deck.gl map (desktop mode)');
       try {
         this.container.classList.add('deckgl-mode');
@@ -136,40 +144,62 @@ export class MapContainer {
     }
   }
 
-  // Unified public API - delegates to active map implementation
+  /** Switch to 3D globe mode at runtime (called from Settings). */
+  public switchToGlobe(): void {
+    if (this.useGlobe) return;
+    this.destroyFlatMap();
+    this.useGlobe = true;
+    this.useDeckGL = false;
+    this.globeMap = new GlobeMap(this.container, this.initialState);
+  }
+
+  /** Switch back to flat map at runtime (called from Settings). */
+  public switchToFlat(): void {
+    if (!this.useGlobe) return;
+    this.globeMap?.destroy();
+    this.globeMap = null;
+    this.useGlobe = false;
+    this.useDeckGL = this.shouldUseDeckGL();
+    this.init();
+  }
+
+  public isGlobeMode(): boolean {
+    return this.useGlobe;
+  }
+
+  private destroyFlatMap(): void {
+    this.deckGLMap?.destroy();
+    this.deckGLMap = null;
+    this.svgMap?.destroy();
+    this.svgMap = null;
+    this.container.innerHTML = '';
+    this.container.classList.remove('deckgl-mode', 'svg-mode');
+  }
+
+  // ─── Unified public API - delegates to active map implementation ────────────
+
   public render(): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.render();
-    } else {
-      this.svgMap?.render();
-    }
+    if (this.useGlobe) { this.globeMap?.render(); return; }
+    if (this.useDeckGL) { this.deckGLMap?.render(); } else { this.svgMap?.render(); }
   }
 
   public setIsResizing(isResizing: boolean): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setIsResizing(isResizing);
-    } else {
-      this.svgMap?.setIsResizing(isResizing);
-    }
+    if (this.useGlobe) { this.globeMap?.setIsResizing(isResizing); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setIsResizing(isResizing); } else { this.svgMap?.setIsResizing(isResizing); }
   }
 
   public setView(view: MapView): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setView(view as DeckMapView);
-    } else {
-      this.svgMap?.setView(view);
-    }
+    if (this.useGlobe) { this.globeMap?.setView(view); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setView(view as DeckMapView); } else { this.svgMap?.setView(view); }
   }
 
   public setZoom(zoom: number): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setZoom(zoom);
-    } else {
-      this.svgMap?.setZoom(zoom);
-    }
+    if (this.useGlobe) { this.globeMap?.setZoom(zoom); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setZoom(zoom); } else { this.svgMap?.setZoom(zoom); }
   }
 
   public setCenter(lat: number, lon: number, zoom?: number): void {
+    if (this.useGlobe) { this.globeMap?.setCenter(lat, lon, zoom); return; }
     if (this.useDeckGL) {
       this.deckGLMap?.setCenter(lat, lon, zoom);
     } else {
@@ -179,36 +209,29 @@ export class MapContainer {
   }
 
   public getCenter(): { lat: number; lon: number } | null {
-    if (this.useDeckGL) {
-      return this.deckGLMap?.getCenter() ?? null;
-    }
+    if (this.useGlobe) return this.globeMap?.getCenter() ?? null;
+    if (this.useDeckGL) return this.deckGLMap?.getCenter() ?? null;
     return this.svgMap?.getCenter() ?? null;
   }
 
   public setTimeRange(range: TimeRange): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setTimeRange(range);
-    } else {
-      this.svgMap?.setTimeRange(range);
-    }
+    if (this.useGlobe) { this.globeMap?.setTimeRange(range); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setTimeRange(range); } else { this.svgMap?.setTimeRange(range); }
   }
 
   public getTimeRange(): TimeRange {
-    if (this.useDeckGL) {
-      return this.deckGLMap?.getTimeRange() ?? '7d';
-    }
+    if (this.useGlobe) return this.globeMap?.getTimeRange() ?? '7d';
+    if (this.useDeckGL) return this.deckGLMap?.getTimeRange() ?? '7d';
     return this.svgMap?.getTimeRange() ?? '7d';
   }
 
   public setLayers(layers: MapLayers): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setLayers(layers);
-    } else {
-      this.svgMap?.setLayers(layers);
-    }
+    if (this.useGlobe) { this.globeMap?.setLayers(layers); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setLayers(layers); } else { this.svgMap?.setLayers(layers); }
   }
 
   public getState(): MapContainerState {
+    if (this.useGlobe) return this.globeMap?.getState() ?? this.initialState;
     if (this.useDeckGL) {
       const state = this.deckGLMap?.getState();
       return state ? { ...state, view: state.view as MapView } : this.initialState;
@@ -216,29 +239,21 @@ export class MapContainer {
     return this.svgMap?.getState() ?? this.initialState;
   }
 
-  // Data setters
+  // ─── Data setters ────────────────────────────────────────────────────────────
+
   public setEarthquakes(earthquakes: Earthquake[]): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setEarthquakes(earthquakes);
-    } else {
-      this.svgMap?.setEarthquakes(earthquakes);
-    }
+    if (this.useGlobe) { this.globeMap?.setEarthquakes(earthquakes); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setEarthquakes(earthquakes); } else { this.svgMap?.setEarthquakes(earthquakes); }
   }
 
   public setWeatherAlerts(alerts: WeatherAlert[]): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setWeatherAlerts(alerts);
-    } else {
-      this.svgMap?.setWeatherAlerts(alerts);
-    }
+    if (this.useGlobe) { this.globeMap?.setWeatherAlerts(alerts); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setWeatherAlerts(alerts); } else { this.svgMap?.setWeatherAlerts(alerts); }
   }
 
   public setOutages(outages: InternetOutage[]): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setOutages(outages);
-    } else {
-      this.svgMap?.setOutages(outages);
-    }
+    if (this.useGlobe) { this.globeMap?.setOutages(outages); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setOutages(outages); } else { this.svgMap?.setOutages(outages); }
   }
 
   public setAisData(disruptions: AisDisruptionEvent[], density: AisDensityZone[]): void {
@@ -282,27 +297,18 @@ export class MapContainer {
   }
 
   public setMilitaryFlights(flights: MilitaryFlight[], clusters: MilitaryFlightCluster[] = []): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setMilitaryFlights(flights, clusters);
-    } else {
-      this.svgMap?.setMilitaryFlights(flights, clusters);
-    }
+    if (this.useGlobe) { this.globeMap?.setMilitaryFlights(flights); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setMilitaryFlights(flights, clusters); } else { this.svgMap?.setMilitaryFlights(flights, clusters); }
   }
 
   public setMilitaryVessels(vessels: MilitaryVessel[], clusters: MilitaryVesselCluster[] = []): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setMilitaryVessels(vessels, clusters);
-    } else {
-      this.svgMap?.setMilitaryVessels(vessels, clusters);
-    }
+    if (this.useGlobe) { this.globeMap?.setMilitaryVessels(vessels); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setMilitaryVessels(vessels, clusters); } else { this.svgMap?.setMilitaryVessels(vessels, clusters); }
   }
 
   public setNaturalEvents(events: NaturalEvent[]): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setNaturalEvents(events);
-    } else {
-      this.svgMap?.setNaturalEvents(events);
-    }
+    if (this.useGlobe) { this.globeMap?.setNaturalEvents(events); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setNaturalEvents(events); } else { this.svgMap?.setNaturalEvents(events); }
   }
 
   public setFires(fires: Array<{ lat: number; lon: number; brightness: number; frp: number; confidence: number; region: string; acq_date: string; daynight: string }>): void {
@@ -435,32 +441,25 @@ export class MapContainer {
     }
   }
 
-  // Callback setters - MapComponent uses different names
+  // ─── Callback setters ────────────────────────────────────────────────────────
+
   public onHotspotClicked(callback: (hotspot: Hotspot) => void): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setOnHotspotClick(callback);
-    } else {
-      this.svgMap?.onHotspotClicked(callback);
-    }
+    if (this.useGlobe) { this.globeMap?.setOnHotspotClick(callback); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setOnHotspotClick(callback); } else { this.svgMap?.onHotspotClicked(callback); }
   }
 
   public onTimeRangeChanged(callback: (range: TimeRange) => void): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setOnTimeRangeChange(callback);
-    } else {
-      this.svgMap?.onTimeRangeChanged(callback);
-    }
+    if (this.useGlobe) { this.globeMap?.onTimeRangeChanged(callback); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setOnTimeRangeChange(callback); } else { this.svgMap?.onTimeRangeChanged(callback); }
   }
 
   public setOnLayerChange(callback: (layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setOnLayerChange(callback);
-    } else {
-      this.svgMap?.setOnLayerChange(callback);
-    }
+    if (this.useGlobe) { this.globeMap?.setOnLayerChange(callback); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setOnLayerChange(callback); } else { this.svgMap?.setOnLayerChange(callback); }
   }
 
   public onStateChanged(callback: (state: MapContainerState) => void): void {
+    if (this.useGlobe) { this.globeMap?.onStateChanged(callback); return; }
     if (this.useDeckGL) {
       this.deckGLMap?.setOnStateChange((state) => {
         callback({ ...state, view: state.view as MapView });
@@ -607,11 +606,8 @@ export class MapContainer {
   }
 
   public onCountryClicked(callback: (country: CountryClickPayload) => void): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setOnCountryClick(callback);
-    } else {
-      this.svgMap?.setOnCountryClick(callback);
-    }
+    if (this.useGlobe) { this.globeMap?.setOnCountryClick(callback); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setOnCountryClick(callback); } else { this.svgMap?.setOnCountryClick(callback); }
   }
 
   public fitCountry(code: string): void {
@@ -650,10 +646,8 @@ export class MapContainer {
   }
 
   public destroy(): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.destroy();
-    } else {
-      this.svgMap?.destroy();
-    }
+    this.globeMap?.destroy();
+    this.deckGLMap?.destroy();
+    this.svgMap?.destroy();
   }
 }

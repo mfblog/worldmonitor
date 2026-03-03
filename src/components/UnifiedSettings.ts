@@ -24,6 +24,10 @@ export interface UnifiedSettingsConfig {
   resetLayout: () => void;
   isDesktopApp: boolean;
   statusPanel?: StatusPanel | null;
+  /** True when the 3D globe is currently active */
+  isGlobeMode?: () => boolean;
+  /** Switch between flat-map and 3D-globe */
+  onMapModeChange?: (useGlobe: boolean) => void;
 }
 
 type TabId = 'general' | 'panels' | 'sources' | 'status';
@@ -171,7 +175,10 @@ export class UnifiedSettings {
         return;
       }
 
-      if (target.id === 'us-cloud') {
+      if (target.id === 'us-globe-mode') {
+        this.config.onMapModeChange?.(target.checked);
+        return;
+      } else if (target.id === 'us-cloud') {
         setAiFlowSetting('cloudLlm', target.checked);
         this.updateAiStatus();
       } else if (target.id === 'us-browser') {
@@ -304,11 +311,26 @@ export class UnifiedSettings {
   private renderGeneralContent(): string {
     const settings = getAiFlowSettings();
     const currentLang = getCurrentLanguage();
+    const globeEnabled = this.config.isGlobeMode?.() ?? false;
 
     let html = '';
 
     // Map section
     html += `<div class="ai-flow-section-label">${t('components.insights.sectionMap')}</div>`;
+
+    // Globe / flat-map mode toggle
+    html += `
+      <div class="ai-flow-toggle-row">
+        <div class="ai-flow-toggle-label-wrap">
+          <div class="ai-flow-toggle-label">3D Globe View</div>
+          <div class="ai-flow-toggle-desc">Switch between flat map and interactive 3D globe (like Sentinel). Zoom, rotate, and explore in three dimensions.</div>
+        </div>
+        <label class="ai-flow-switch">
+          <input type="checkbox" id="us-globe-mode"${globeEnabled ? ' checked' : ''}>
+          <span class="ai-flow-slider"></span>
+        </label>
+      </div>`;
+
     html += this.toggleRowHtml('us-map-flash', t('components.insights.mapFlashLabel'), t('components.insights.mapFlashDesc'), settings.mapNewsFlash);
 
     // Panels section

@@ -589,6 +589,15 @@ export class EventHandlerManager implements AppModule {
       },
       isDesktopApp: this.ctx.isDesktopApp,
       statusPanel: this.ctx.statusPanel,
+      isGlobeMode: () => this.ctx.map?.isGlobeMode() ?? false,
+      onMapModeChange: (useGlobe: boolean) => {
+        saveToStorage(STORAGE_KEYS.mapMode, useGlobe ? 'globe' : 'flat');
+        if (useGlobe) {
+          this.ctx.map?.switchToGlobe();
+        } else {
+          this.ctx.map?.switchToFlat();
+        }
+      },
     });
 
     if (this.ctx.statusPanel) {
