@@ -3660,6 +3660,18 @@ export class DeckGLMap {
     if (import.meta.env.DEV && elapsed > 16) {
       console.warn(`[DeckGLMap] updateLayers took ${elapsed.toFixed(2)}ms (>16ms budget)`);
     }
+    this.updateZoomHints();
+  }
+
+  private updateZoomHints(): void {
+    const toggleList = this.container.querySelector('.deckgl-layer-toggles .toggle-list');
+    if (!toggleList) return;
+    for (const [key, enabled] of Object.entries(this.state.layers)) {
+      const toggle = toggleList.querySelector(`.layer-toggle[data-layer="${key}"]`) as HTMLElement | null;
+      if (!toggle) continue;
+      const zoomHidden = !!enabled && !this.isLayerVisible(key as keyof MapLayers);
+      toggle.classList.toggle('zoom-hidden', zoomHidden);
+    }
   }
 
   public setView(view: DeckMapView): void {

@@ -12844,6 +12844,20 @@ a.prediction-link:hover {
   background: var(--bg);
 }
 
+.deckgl-layer-toggles .layer-toggle.zoom-hidden .toggle-label {
+  opacity: 0.45;
+}
+
+.deckgl-layer-toggles .layer-toggle.zoom-hidden::after {
+  content: '🔍+';
+  position: absolute;
+  top: -4px;
+  right: 2px;
+  font-size: 7px;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
 .deckgl-layer-toggles .layer-toggle input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
