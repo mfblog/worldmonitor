@@ -69,9 +69,10 @@ export async function listAviationNews(
     req: ListAviationNewsRequest,
 ): Promise<ListAviationNewsResponse> {
     const entities = parseStringArray(req.entities).map(e => e.toUpperCase());
-    const windowMs = (req.windowHours ?? 24) * 60 * 60 * 1000;
+    const windowHours = req.windowHours ?? 24;
+    const windowMs = windowHours * 60 * 60 * 1000;
     const maxItems = Math.min(req.maxItems ?? 20, 50);
-    const cacheKey = `aviation:news:${[...entities].sort().join(',')}:${req.windowHours}:v1`;
+    const cacheKey = `aviation:news:${[...entities].sort().join(',')}:${windowHours}:v1`;
     const now = Date.now();
 
     try {
@@ -104,7 +105,7 @@ export async function listAviationNews(
                     const snippet = (item.description as string | undefined ?? '').replace(/<[^>]+>/g, '').slice(0, 200);
 
                     filtered.push({
-                        id: Buffer.from(link).toString('base64').slice(0, 32),
+                        id: btoa(link).slice(0, 32),
                         title,
                         url: link,
                         sourceName: (item._source as string) ?? 'Aviation News',

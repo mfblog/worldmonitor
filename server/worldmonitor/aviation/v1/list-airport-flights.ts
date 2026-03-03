@@ -155,6 +155,9 @@ export async function listAirportFlights(
                     return { flights: buildSimulatedFlights(airport, direction, limit, now), source: 'simulated' };
                 }
 
+                // TODO: FLIGHT_DIRECTION_BOTH only fetches departures (dep_iata). To support true
+                // bidirectional results, two parallel calls (dep_iata + arr_iata at limit/2 each)
+                // would be needed — deferred due to AviationStack rate-limit cost.
                 const paramKey = direction === 'FLIGHT_DIRECTION_ARRIVAL' ? 'arr_iata' : 'dep_iata';
                 const url = `${AVIATIONSTACK_URL}?access_key=${apiKey}&${paramKey}=${airport}&limit=${limit}`;
 
