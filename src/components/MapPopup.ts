@@ -1,5 +1,5 @@
 import type { ConflictZone, Hotspot, NewsItem, MilitaryBase, StrategicWaterway, APTGroup, NuclearFacility, EconomicCenter, GammaIrradiator, Pipeline, UnderseaCable, CableAdvisory, RepairShip, InternetOutage, AIDataCenter, AisDisruptionEvent, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, Port, Spaceport, CriticalMineralProject, CyberThreat } from '@/types';
-import type { AirportDelayAlert } from '@/services/aviation';
+import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
 import type { Earthquake } from '@/services/earthquakes';
 import type { WeatherAlert } from '@/services/weather';
 import { UNDERSEA_CABLES } from '@/config';
@@ -14,7 +14,7 @@ import { getNaturalEventIcon } from '@/services/eonet';
 import { getHotspotEscalation, getEscalationChange24h } from '@/services/hotspot-escalation';
 import { getCableHealthRecord } from '@/services/cable-health';
 
-export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'protest' | 'protestCluster' | 'flight' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming';
+export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming';
 
 interface TechEventPopupData {
   id: string;
@@ -144,7 +144,7 @@ interface DatacenterClusterData {
 
 interface PopupData {
   type: PopupType;
-  data: ConflictZone | Hotspot | Earthquake | WeatherAlert | MilitaryBase | StrategicWaterway | APTGroup | CyberThreat | NuclearFacility | EconomicCenter | GammaIrradiator | Pipeline | UnderseaCable | CableAdvisory | RepairShip | InternetOutage | AIDataCenter | AisDisruptionEvent | SocialUnrestEvent | AirportDelayAlert | MilitaryFlight | MilitaryVessel | MilitaryFlightCluster | MilitaryVesselCluster | NaturalEvent | Port | Spaceport | CriticalMineralProject | StartupHub | CloudRegion | TechHQ | Accelerator | TechEventPopupData | TechHQClusterData | TechEventClusterData | ProtestClusterData | DatacenterClusterData | TechHubActivity | GeoHubActivity | StockExchangePopupData | FinancialCenterPopupData | CentralBankPopupData | CommodityHubPopupData | IranEventPopupData | GpsJammingPopupData;
+  data: ConflictZone | Hotspot | Earthquake | WeatherAlert | MilitaryBase | StrategicWaterway | APTGroup | CyberThreat | NuclearFacility | EconomicCenter | GammaIrradiator | Pipeline | UnderseaCable | CableAdvisory | RepairShip | InternetOutage | AIDataCenter | AisDisruptionEvent | SocialUnrestEvent | AirportDelayAlert | PositionSample | MilitaryFlight | MilitaryVessel | MilitaryFlightCluster | MilitaryVesselCluster | NaturalEvent | Port | Spaceport | CriticalMineralProject | StartupHub | CloudRegion | TechHQ | Accelerator | TechEventPopupData | TechHQClusterData | TechEventClusterData | ProtestClusterData | DatacenterClusterData | TechHubActivity | GeoHubActivity | StockExchangePopupData | FinancialCenterPopupData | CentralBankPopupData | CommodityHubPopupData | IranEventPopupData | GpsJammingPopupData;
   relatedNews?: NewsItem[];
   x: number;
   y: number;
@@ -414,6 +414,8 @@ export class MapPopup {
         return this.renderProtestClusterPopup(data.data as ProtestClusterData);
       case 'flight':
         return this.renderFlightPopup(data.data as AirportDelayAlert);
+      case 'aircraft':
+        return this.renderAircraftPopup(data.data as PositionSample);
       case 'militaryFlight':
         return this.renderMilitaryFlightPopup(data.data as MilitaryFlight);
       case 'militaryVessel':
@@ -1104,6 +1106,51 @@ export class MapPopup {
           <div class="popup-stat">
             <span class="stat-label">${t('popups.updated')}</span>
             <span class="stat-value">${delay.updatedAt.toLocaleTimeString()}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderAircraftPopup(pos: PositionSample): string {
+    const callsign = escapeHtml(pos.callsign || pos.icao24);
+    const onGroundBadge = pos.onGround ? 'low' : 'elevated';
+    const statusLabel = pos.onGround ? t('popups.aircraft.ground') : t('popups.aircraft.airborne');
+    const altDisplay = pos.altitudeFt > 0 ? `FL${Math.round(pos.altitudeFt / 100)} (${pos.altitudeFt.toLocaleString()} ft)` : t('popups.aircraft.ground');
+
+    return `
+      <div class="popup-header aircraft">
+        <span class="popup-icon">&#9992;</span>
+        <span class="popup-title">${callsign}</span>
+        <span class="popup-badge ${onGroundBadge}">${statusLabel}</span>
+        <button class="popup-close">&times;</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-subtitle">ICAO24: ${escapeHtml(pos.icao24)}</div>
+        <div class="popup-stats">
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.aircraft.altitude')}</span>
+            <span class="stat-value">${altDisplay}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.aircraft.speed')}</span>
+            <span class="stat-value">${pos.groundSpeedKts} kts</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.aircraft.heading')}</span>
+            <span class="stat-value">${Math.round(pos.trackDeg)}&deg;</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.aircraft.position')}</span>
+            <span class="stat-value">${pos.lat.toFixed(4)}&deg;, ${pos.lon.toFixed(4)}&deg;</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.source')}</span>
+            <span class="stat-value">${escapeHtml(pos.source)}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.updated')}</span>
+            <span class="stat-value">${pos.observedAt.toLocaleTimeString()}</span>
           </div>
         </div>
       </div>

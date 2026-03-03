@@ -80,6 +80,7 @@ export class AirlineIntelPanel {
     private pricesCurrency = 'usd';
     private loading = false;
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
+    private liveIndicator!: HTMLElement;
 
     constructor() {
         const wl = aviationWatchlist.get();
@@ -111,6 +112,12 @@ export class AirlineIntelPanel {
 
         this.contentEl = this.el.querySelector('#airlineIntelContent')!;
 
+        this.liveIndicator = document.createElement('span');
+        this.liveIndicator.className = 'live-badge';
+        this.liveIndicator.textContent = '\u25CF LIVE';
+        this.liveIndicator.style.cssText = 'display:none;color:#22c55e;font-size:10px;font-weight:700;margin-left:8px;letter-spacing:0.5px;';
+        this.el.querySelector('.panel-title')?.appendChild(this.liveIndicator);
+
         this.el.querySelector('#airlineIntelRefresh')?.addEventListener('click', () => this.refresh());
 
         this.addStyles();
@@ -129,6 +136,17 @@ export class AirlineIntelPanel {
 
     destroy(): void {
         if (this.refreshTimer) clearInterval(this.refreshTimer);
+    }
+
+    /** Called by the map when new aircraft positions arrive. */
+    updateLivePositions(positions: PositionSample[]): void {
+        this.trackingData = positions;
+        if (this.activeTab === 'tracking') this.renderTab();
+    }
+
+    /** Toggle the LIVE indicator badge. */
+    setLiveMode(active: boolean): void {
+        this.liveIndicator.style.display = active ? '' : 'none';
     }
 
     private switchTab(tab: Tab): void {

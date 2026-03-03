@@ -26,7 +26,7 @@ import type {
   CyberThreat,
   CableHealthRecord,
 } from '@/types';
-import type { AirportDelayAlert } from '@/services/aviation';
+import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
 import type { DisplacementFlow } from '@/services/displacement';
 import type { Earthquake } from '@/services/earthquakes';
 import type { ClimateAnomaly } from '@/services/climate';
@@ -281,6 +281,14 @@ export class MapContainer {
     }
   }
 
+  public setAircraftPositions(positions: PositionSample[]): void {
+    if (this.useDeckGL) {
+      this.deckGLMap?.setAircraftPositions(positions);
+    } else {
+      this.svgMap?.setAircraftPositions(positions);
+    }
+  }
+
   public setMilitaryFlights(flights: MilitaryFlight[], clusters: MilitaryFlightCluster[] = []): void {
     if (this.useDeckGL) {
       this.deckGLMap?.setMilitaryFlights(flights, clusters);
@@ -457,6 +465,12 @@ export class MapContainer {
       this.deckGLMap?.setOnLayerChange(callback);
     } else {
       this.svgMap?.setOnLayerChange(callback);
+    }
+  }
+
+  public setOnAircraftPositionsUpdate(callback: (positions: PositionSample[]) => void): void {
+    if (this.useDeckGL) {
+      this.deckGLMap?.setOnAircraftPositionsUpdate(callback);
     }
   }
 

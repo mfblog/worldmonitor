@@ -882,7 +882,9 @@
         "elevated": "Elevated",
         "monitoring": "Monitoring",
         "base": "Base",
-        "nuclear": "Nuclear"
+        "nuclear": "Nuclear",
+        "aircraftAirborne": "Aircraft (Airborne)",
+        "aircraftGround": "Aircraft (Ground)"
       },
       "layerGuide": "Layer Guide",
       "layersTitle": "Layers",
@@ -918,7 +920,7 @@
         "pipelines": "Pipelines",
         "militaryActivity": "Military Activity",
         "shipTraffic": "Ship Traffic",
-        "flightDelays": "Flight Delays",
+        "flightDelays": "Aviation",
         "protests": "Protests",
         "ucdpEvents": "Armed Conflict Events",
         "displacementFlows": "Displacement Flows",
@@ -1638,6 +1640,14 @@
         "mena": "Middle East",
         "africa": "Africa"
       }
+    },
+    "aircraft": {
+      "altitude": "Altitude",
+      "speed": "Ground Speed",
+      "heading": "Heading",
+      "position": "Position",
+      "ground": "On Ground",
+      "airborne": "Airborne"
     },
     "apt": {
       "description": "Advanced Persistent Threat group with state-level capabilities. Known for sophisticated cyber operations targeting critical infrastructure, government, and defense sectors."
