@@ -746,8 +746,8 @@
     },
     "supplyChain": {
       "chokepoints": "Chokepoints",
-      "shipping": "Shipping",
-      "minerals": "Minerals",
+      "shipping": "Shipping Rates",
+      "minerals": "Critical Minerals",
       "noChokepoints": "Chokepoint data loading...",
       "noShipping": "Shipping rate data not available",
       "noMinerals": "Mineral data loading...",
@@ -755,6 +755,7 @@
       "upstreamUnavailable": "Supply chain data temporarily unavailable — showing cached data",
       "spikeAlert": "Spike detected — rate significantly above 52-week average (weekly)",
       "warnings": "warning(s)",
+      "aisDisruptions": "AIS disruption(s)",
       "mineral": "Mineral",
       "topProducers": "Top Producers",
       "risk": "Risk",
