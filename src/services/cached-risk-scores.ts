@@ -1,18 +1,13 @@
-/**
- * Cached Risk Scores Service
- * Fetches pre-computed CII and Strategic Risk scores from backend via sebuf RPC.
- * Eliminates 15-minute learning mode for users.
- */
-
 import type { CountryScore, ComponentScores } from './country-instability';
 import { setHasCachedScores } from './country-instability';
-import { getPersistentCache, setPersistentCache } from './persistent-cache';
 import {
   IntelligenceServiceClient,
   type GetRiskScoresResponse,
   type CiiScore,
   type StrategicRisk,
 } from '@/generated/client/worldmonitor/intelligence/v1/service_client';
+import { createCircuitBreaker } from '@/utils';
+import { getHydratedData } from '@/services/bootstrap';
 
 // ---- Sebuf client ----
 
@@ -119,7 +114,7 @@ function toCachedStrategicRisk(risks: StrategicRisk[], ciiScores: CiiScore[]): C
   };
 }
 
-function toRiskScores(resp: GetRiskScoresResponse): CachedRiskScores {
+export function toRiskScores(resp: GetRiskScoresResponse): CachedRiskScores {
   return {
     cii: resp.ciiScores.map(toCachedCII),
     strategicRisk: toCachedStrategicRisk(resp.strategicRisks, resp.ciiScores),
@@ -129,13 +124,25 @@ function toRiskScores(resp: GetRiskScoresResponse): CachedRiskScores {
   };
 }
 
-// ---- Caching / dedup logic (unchanged) ----
+// ---- Circuit breaker ----
 
-const RISK_CACHE_KEY = 'risk-scores:latest';
-let cachedScores: CachedRiskScores | null = null;
-let fetchPromise: Promise<CachedRiskScores | null> | null = null;
-let lastFetchTime = 0;
-const REFETCH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const breaker = createCircuitBreaker<CachedRiskScores>({
+  name: 'Risk Scores',
+  cacheTtlMs: 5 * 60 * 1000, // 5 min
+  persistCache: true,
+});
+
+function emptyFallback(): CachedRiskScores {
+  return {
+    cii: [],
+    strategicRisk: { score: 0, level: 'low', trend: 'stable', lastUpdated: new Date().toISOString(), contributors: [] },
+    protestCount: 0,
+    computedAt: new Date().toISOString(),
+    cached: true,
+  };
+}
+
+// ---- Abort helpers ----
 
 function createAbortError(): DOMException {
   return new DOMException('The operation was aborted.', 'AbortError');
@@ -165,58 +172,45 @@ function withCallerAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<
   });
 }
 
-async function loadPersistentRiskScores(): Promise<CachedRiskScores | null> {
-  const entry = await getPersistentCache<CachedRiskScores>(RISK_CACHE_KEY);
-  return entry?.data ?? null;
-}
-
 export async function fetchCachedRiskScores(signal?: AbortSignal): Promise<CachedRiskScores | null> {
   if (signal?.aborted) throw createAbortError();
-  const now = Date.now();
 
-  if (cachedScores && now - lastFetchTime < REFETCH_INTERVAL_MS) {
-    return cachedScores;
+  // Layer 1: Bootstrap hydration (one-time, only when breaker has no cached data)
+  if (breaker.getCached() === null) {
+    const hydrated = getHydratedData('riskScores') as GetRiskScoresResponse | undefined;
+    if (hydrated?.ciiScores?.length) {
+      const data = toRiskScores(hydrated);
+      breaker.recordSuccess(data);
+      setHasCachedScores(true);
+      return data;
+    }
   }
 
-  if (fetchPromise) {
-    return withCallerAbort(fetchPromise, signal);
-  }
-
-  fetchPromise = (async () => {
-    try {
+  // Layer 2: Circuit breaker (in-memory cache → SWR → IndexedDB → RPC → fallback)
+  const result = await withCallerAbort(
+    breaker.execute(async () => {
       const resp = await client.getRiskScores({ region: '' });
       const data = toRiskScores(resp);
-      cachedScores = data;
-      lastFetchTime = now;
       setHasCachedScores(true);
-      void setPersistentCache(RISK_CACHE_KEY, data);
-      return cachedScores;
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') throw error;
-      console.error('[CachedRiskScores] Fetch error:', error);
-      const fallback = cachedScores ?? await loadPersistentRiskScores();
-      if (fallback) {
-        if (!cachedScores) {
-          cachedScores = fallback;
-          setHasCachedScores(true);
-        }
-        lastFetchTime = now;
-      }
-      return fallback;
-    } finally {
-      fetchPromise = null;
-    }
-  })();
+      return data;
+    }, emptyFallback()),
+    signal,
+  );
 
-  return withCallerAbort(fetchPromise, signal);
+  if (!result || !Array.isArray(result.cii) || result.cii.length === 0) {
+    return null;
+  }
+
+  setHasCachedScores(true);
+  return result;
 }
 
 export function getCachedScores(): CachedRiskScores | null {
-  return cachedScores;
+  return breaker.getCached();
 }
 
 export function hasCachedScores(): boolean {
-  return cachedScores !== null;
+  return breaker.getCached() !== null;
 }
 
 export function toCountryScore(cached: CachedCIIScore): CountryScore {

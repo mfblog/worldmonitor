@@ -24,7 +24,7 @@ export const BOOTSTRAP_TIERS: Record<string, 'slow' | 'fast'> = {
   bisPolicy: 'slow', bisExchange: 'slow', bisCredit: 'slow',
   minerals: 'slow', giving: 'slow', sectors: 'slow',
   etfFlows: 'slow', shippingRates: 'slow', wildfires: 'slow',
-  climateAnomalies: 'slow', theaterPosture: 'slow',
+  climateAnomalies: 'slow', theaterPosture: 'slow', riskScores: 'slow',
   earthquakes: 'fast', outages: 'fast', serviceStatuses: 'fast',
   macroSignals: 'fast', chokepoints: 'fast',
 };
