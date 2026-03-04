@@ -15,6 +15,7 @@
  */
 
 import Globe from 'globe.gl';
+import { isDesktopRuntime } from '@/services/runtime';
 import type { GlobeInstance, ConfigOptions } from 'globe.gl';
 import { INTEL_HOTSPOTS, CONFLICT_ZONES, GEOPOLITICAL_BOUNDARIES, MILITARY_BASES, NUCLEAR_FACILITIES, SPACEPORTS, ECONOMIC_CENTERS, STRATEGIC_WATERWAYS, CRITICAL_MINERALS, UNDERSEA_CABLES } from '@/config/geo';
 import { PIPELINES } from '@/config/pipelines';
@@ -372,11 +373,20 @@ export class GlobeMap {
   private async initGlobe(): Promise<void> {
     if (this.destroyed) return;
 
+    const desktop = isDesktopRuntime();
     const initialScale = getGlobeRenderScale();
-    const initialPixelRatio = resolveGlobePixelRatio(initialScale);
+    const initialPixelRatio = desktop
+      ? Math.min(resolveGlobePixelRatio(initialScale), 1.25)
+      : resolveGlobePixelRatio(initialScale);
     const config: ConfigOptions = {
       animateIn: false,
-      rendererConfig: { logarithmicDepthBuffer: true, antialias: initialPixelRatio > 1 },
+      rendererConfig: {
+        // Desktop (Tauri/WebView2) can fall back to software rendering on some machines.
+        // Keep defaults conservative to avoid 1fps reports (see #930).
+        powerPreference: desktop ? 'high-performance' : 'default',
+        logarithmicDepthBuffer: !desktop,
+        antialias: initialPixelRatio > 1,
+      },
     };
 
     const globe = new Globe(this.container, config) as GlobeInstance;
@@ -388,7 +398,9 @@ export class GlobeMap {
 
     const applyRenderQuality = (scale?: GlobeRenderScale, width?: number, height?: number) => {
       try {
-        const pr = resolveGlobePixelRatio(scale ?? getGlobeRenderScale());
+        const pr = desktop
+          ? Math.min(resolveGlobePixelRatio(scale ?? getGlobeRenderScale()), 1.25)
+          : resolveGlobePixelRatio(scale ?? getGlobeRenderScale());
         const renderer = globe.renderer();
         renderer.setPixelRatio(pr);
         const w = (width ?? this.container.clientWidth) || window.innerWidth;
@@ -418,14 +430,14 @@ export class GlobeMap {
 
     // Orbit controls — match Sentinel's settings
     const controls = globe.controls();
-    controls.autoRotate = true;
+    controls.autoRotate = !desktop;
     controls.autoRotateSpeed = 0.3;
     controls.enablePan = false;
     controls.enableZoom = true;
     controls.zoomSpeed = 1.4;
     controls.minDistance = 101;
     controls.maxDistance = 600;
-    controls.enableDamping = true;
+    controls.enableDamping = !desktop;
 
     // Force the canvas to visually fill the container so it expands with CSS transitions.
     // globe.gl sets explicit width/height attributes; we override the CSS so the canvas
@@ -474,7 +486,7 @@ export class GlobeMap {
     const scheduleResumeAutoRotate = () => {
       if (this.autoRotateTimer) clearTimeout(this.autoRotateTimer);
       this.autoRotateTimer = setTimeout(() => {
-        controls.autoRotate = true;
+        controls.autoRotate = !desktop;
       }, 60_000);
     };
 
