@@ -1,5 +1,5 @@
-import type { ConflictZone, Hotspot, NewsItem, MilitaryBase, StrategicWaterway, APTGroup, NuclearFacility, EconomicCenter, GammaIrradiator, Pipeline, UnderseaCable, CableAdvisory, RepairShip, InternetOutage, AIDataCenter, AisDisruptionEvent, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, Port, Spaceport, CriticalMineralProject, CyberThreat, GeopoliticalBoundary } from '@/types';
-import type { AirportDelayAlert } from '@/services/aviation';
+import type { ConflictZone, Hotspot, NewsItem, MilitaryBase, StrategicWaterway, APTGroup, NuclearFacility, EconomicCenter, GammaIrradiator, Pipeline, UnderseaCable, CableAdvisory, RepairShip, InternetOutage, AIDataCenter, AisDisruptionEvent, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, Port, Spaceport, CriticalMineralProject, CyberThreat } from '@/types';
+import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
 import type { Earthquake } from '@/services/earthquakes';
 import type { WeatherAlert } from '@/services/weather';
 import { UNDERSEA_CABLES } from '@/config';
@@ -14,7 +14,7 @@ import { getNaturalEventIcon } from '@/services/eonet';
 import { getHotspotEscalation, getEscalationChange24h } from '@/services/hotspot-escalation';
 import { getCableHealthRecord } from '@/services/cable-health';
 
-export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'protest' | 'protestCluster' | 'flight' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming' | 'geopoliticalBoundary';
+export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming';
 
 interface TechEventPopupData {
   id: string;
@@ -144,7 +144,7 @@ interface DatacenterClusterData {
 
 interface PopupData {
   type: PopupType;
-  data: ConflictZone | Hotspot | Earthquake | WeatherAlert | MilitaryBase | StrategicWaterway | APTGroup | CyberThreat | NuclearFacility | EconomicCenter | GammaIrradiator | Pipeline | UnderseaCable | CableAdvisory | RepairShip | InternetOutage | AIDataCenter | AisDisruptionEvent | SocialUnrestEvent | AirportDelayAlert | MilitaryFlight | MilitaryVessel | MilitaryFlightCluster | MilitaryVesselCluster | NaturalEvent | Port | Spaceport | CriticalMineralProject | StartupHub | CloudRegion | TechHQ | Accelerator | TechEventPopupData | TechHQClusterData | TechEventClusterData | ProtestClusterData | DatacenterClusterData | TechHubActivity | GeoHubActivity | StockExchangePopupData | FinancialCenterPopupData | CentralBankPopupData | CommodityHubPopupData | IranEventPopupData | GpsJammingPopupData | GeopoliticalBoundary;
+  data: ConflictZone | Hotspot | Earthquake | WeatherAlert | MilitaryBase | StrategicWaterway | APTGroup | CyberThreat | NuclearFacility | EconomicCenter | GammaIrradiator | Pipeline | UnderseaCable | CableAdvisory | RepairShip | InternetOutage | AIDataCenter | AisDisruptionEvent | SocialUnrestEvent | AirportDelayAlert | PositionSample | MilitaryFlight | MilitaryVessel | MilitaryFlightCluster | MilitaryVesselCluster | NaturalEvent | Port | Spaceport | CriticalMineralProject | StartupHub | CloudRegion | TechHQ | Accelerator | TechEventPopupData | TechHQClusterData | TechEventClusterData | ProtestClusterData | DatacenterClusterData | TechHubActivity | GeoHubActivity | StockExchangePopupData | FinancialCenterPopupData | CentralBankPopupData | CommodityHubPopupData | IranEventPopupData | GpsJammingPopupData;
   relatedNews?: NewsItem[];
   x: number;
   y: number;
@@ -370,8 +370,7 @@ export class MapPopup {
 
   private renderContent(data: PopupData): string {
     switch (data.type) {
-      case 'geopoliticalBoundary':
-        return this.renderGeopoliticalBoundaryPopup(data.data as GeopoliticalBoundary);
+
       case 'conflict':
         return this.renderConflictPopup(data.data as ConflictZone);
       case 'hotspot':
@@ -416,6 +415,8 @@ export class MapPopup {
         return this.renderProtestClusterPopup(data.data as ProtestClusterData);
       case 'flight':
         return this.renderFlightPopup(data.data as AirportDelayAlert);
+      case 'aircraft':
+        return this.renderAircraftPopup(data.data as PositionSample);
       case 'militaryFlight':
         return this.renderMilitaryFlightPopup(data.data as MilitaryFlight);
       case 'militaryVessel':
@@ -463,54 +464,6 @@ export class MapPopup {
     }
   }
 
-  private renderGeopoliticalBoundaryPopup(boundary: GeopoliticalBoundary): string {
-    const typeLabel = escapeHtml(t(`popups.geopoliticalBoundary.types.${boundary.boundaryType}`).toUpperCase());
-
-    return `
-      <div class="popup-header geopolitical-boundary">
-        <span class="popup-title">${escapeHtml(boundary.name.toUpperCase())}</span>
-        <span class="popup-badge ${escapeHtml(boundary.boundaryType)}">${typeLabel}</span>
-        <button class="popup-close">\u00d7</button>
-      </div>
-      <div class="popup-body">
-        <div class="popup-stats">
-          ${boundary.established ? `
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.geopoliticalBoundary.established')}</span>
-            <span class="stat-value">${escapeHtml(boundary.established)}</span>
-          </div>` : ''}
-          ${boundary.status ? `
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.status')}</span>
-            <span class="stat-value">${escapeHtml(boundary.status)}</span>
-          </div>` : ''}
-          ${boundary.dimensions ? `
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.geopoliticalBoundary.dimensions')}</span>
-            <span class="stat-value">${escapeHtml(boundary.dimensions)}</span>
-          </div>` : ''}
-          ${boundary.location ? `
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.location')}</span>
-            <span class="stat-value">${escapeHtml(boundary.location)}</span>
-          </div>` : ''}
-        </div>
-        ${boundary.description ? `<p class="popup-description">${escapeHtml(boundary.description)}</p>` : ''}
-        ${boundary.legalBasis ? `
-          <div class="popup-section">
-            <span class="section-label">${t('popups.geopoliticalBoundary.legalBasis')}</span>
-            <span class="popup-description">${escapeHtml(boundary.legalBasis)}</span>
-          </div>` : ''}
-        ${boundary.parties && boundary.parties.length > 0 ? `
-          <div class="popup-section">
-            <span class="section-label">${t('popups.geopoliticalBoundary.parties')}</span>
-            <div class="popup-tags">
-              ${boundary.parties.map(p => `<span class="popup-tag">${escapeHtml(p)}</span>`).join('')}
-            </div>
-          </div>` : ''}
-      </div>
-    `;
-  }
 
   private renderConflictPopup(conflict: ConflictZone): string {
     const severityClass = conflict.intensity === 'high' ? 'high' : conflict.intensity === 'medium' ? 'medium' : 'low';
@@ -1161,6 +1114,51 @@ export class MapPopup {
     `;
   }
 
+  private renderAircraftPopup(pos: PositionSample): string {
+    const callsign = escapeHtml(pos.callsign || pos.icao24);
+    const onGroundBadge = pos.onGround ? 'low' : 'elevated';
+    const statusLabel = pos.onGround ? t('popups.aircraft.ground') : t('popups.aircraft.airborne');
+    const altDisplay = pos.altitudeFt > 0 ? `FL${Math.round(pos.altitudeFt / 100)} (${pos.altitudeFt.toLocaleString()} ft)` : t('popups.aircraft.ground');
+
+    return `
+      <div class="popup-header aircraft">
+        <span class="popup-icon">&#9992;</span>
+        <span class="popup-title">${callsign}</span>
+        <span class="popup-badge ${onGroundBadge}">${statusLabel}</span>
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-subtitle">ICAO24: ${escapeHtml(pos.icao24)}</div>
+        <div class="popup-stats">
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.aircraft.altitude')}</span>
+            <span class="stat-value">${altDisplay}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.aircraft.speed')}</span>
+            <span class="stat-value">${pos.groundSpeedKts} kts</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.aircraft.heading')}</span>
+            <span class="stat-value">${Math.round(pos.trackDeg)}&deg;</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.aircraft.position')}</span>
+            <span class="stat-value">${pos.lat.toFixed(4)}&deg;, ${pos.lon.toFixed(4)}&deg;</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.source')}</span>
+            <span class="stat-value">${escapeHtml(pos.source)}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">${t('popups.updated')}</span>
+            <span class="stat-value">${pos.observedAt.toLocaleTimeString()}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   private renderAPTPopup(apt: APTGroup): string {
     return `
       <div class="popup-header apt">
@@ -1293,8 +1291,8 @@ export class MapPopup {
       ? marketStatus === 'open'
         ? t('popups.open')
         : marketStatus === 'closed'
-        ? t('popups.economic.closed')
-        : t('popups.unknown')
+          ? t('popups.economic.closed')
+          : t('popups.unknown')
       : '';
 
     return `
@@ -1903,8 +1901,8 @@ export class MapPopup {
     const daysLabel = event.daysUntil === 0
       ? t('popups.techEvent.days.today')
       : event.daysUntil === 1
-      ? t('popups.techEvent.days.tomorrow')
-      : t('popups.techEvent.days.inDays', { count: String(event.daysUntil) });
+        ? t('popups.techEvent.days.tomorrow')
+        : t('popups.techEvent.days.inDays', { count: String(event.daysUntil) });
 
     return `
       <div class="popup-header tech-event ${urgencyClass}">
@@ -2340,6 +2338,11 @@ export class MapPopup {
     `;
   }
 
+  private sanitizeClassToken(value: string | undefined, fallback = 'unknown'): string {
+    const token = String(value || '').trim().replace(/[^A-Za-z0-9_-]/g, '').replace(/^[^A-Za-z_]/, '');
+    return token || fallback;
+  }
+
   private renderNaturalEventPopup(event: NaturalEvent): string {
     const categoryColors: Record<string, string> = {
       severeStorms: 'high',
@@ -2358,10 +2361,11 @@ export class MapPopup {
     };
     const icon = getNaturalEventIcon(event.category);
     const severityClass = categoryColors[event.category] || 'low';
+    const categoryClass = this.sanitizeClassToken(event.category, 'manmade');
     const timeAgo = this.getTimeAgo(event.date);
 
     return `
-      <div class="popup-header nat-event ${event.category}">
+      <div class="popup-header nat-event ${categoryClass}">
         <span class="popup-icon">${icon}</span>
         <span class="popup-title">${escapeHtml(event.categoryTitle.toUpperCase())}</span>
         <span class="popup-badge ${severityClass}">${event.closed ? t('popups.naturalEvent.closed') : t('popups.naturalEvent.active')}</span>
@@ -2656,11 +2660,11 @@ export class MapPopup {
           <span class="section-label">${t('popups.iranEvent.relatedEvents')}</span>
           <ul class="cluster-list">
             ${event.relatedEvents.map(r => {
-              const rSev = this.normalizeSeverity(r.severity);
-              const rTime = r.timestamp ? this.getTimeAgo(new Date(r.timestamp)) : '';
-              const rTitle = r.title.length > 60 ? r.title.slice(0, 60) + '…' : r.title;
-              return `<li class="cluster-item"><span class="popup-badge ${rSev}" style="font-size:9px;padding:1px 4px;">${escapeHtml(rSev.toUpperCase())}</span> ${escapeHtml(rTitle)}${rTime ? ` <span style="color:var(--text-muted);font-size:10px;">${escapeHtml(rTime)}</span>` : ''}</li>`;
-            }).join('')}
+      const rSev = this.normalizeSeverity(r.severity);
+      const rTime = r.timestamp ? this.getTimeAgo(new Date(r.timestamp)) : '';
+      const rTitle = r.title.length > 60 ? r.title.slice(0, 60) + '…' : r.title;
+      return `<li class="cluster-item"><span class="popup-badge ${rSev}" style="font-size:9px;padding:1px 4px;">${escapeHtml(rSev.toUpperCase())}</span> ${escapeHtml(rTitle)}${rTime ? ` <span style="color:var(--text-muted);font-size:10px;">${escapeHtml(rTime)}</span>` : ''}</li>`;
+    }).join('')}
           </ul>
         </div>` : '';
 

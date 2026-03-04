@@ -126,10 +126,10 @@ export class StrategicRiskPanel extends Panel {
     );
     this.alerts = getRecentAlerts(24);
 
-    // Try to get cached scores during learning mode
+    // Try to get cached scores during learning mode OR when data sources are insufficient
     const { inLearning } = getLearningProgress();
     this.usedCachedScores = false;
-    if (inLearning) {
+    if (inLearning || this.freshnessSummary.overallStatus === 'insufficient') {
       const cached = await fetchCachedRiskScores(this.signal);
       if (!this.element?.isConnected) return false;
       if (cached && cached.strategicRisk) {
@@ -459,7 +459,7 @@ export class StrategicRiskPanel extends Panel {
     // Only show insufficient state if zero sources after 60s (true failure)
     let html: string;
     const uptime = performance.now();
-    if (this.freshnessSummary.overallStatus === 'insufficient' && uptime > 60_000) {
+    if (this.freshnessSummary.overallStatus === 'insufficient' && uptime > 60_000 && !this.usedCachedScores) {
       html = this.renderInsufficientData();
     } else {
       html = this.renderFullData();

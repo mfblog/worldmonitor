@@ -28,7 +28,7 @@ import type {
   CyberThreat,
   CableHealthRecord,
 } from '@/types';
-import type { AirportDelayAlert } from '@/services/aviation';
+import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
 import type { DisplacementFlow } from '@/services/displacement';
 import type { Earthquake } from '@/services/earthquakes';
 import type { ClimateAnomaly } from '@/services/climate';
@@ -326,6 +326,14 @@ export class MapContainer {
     }
   }
 
+  public setAircraftPositions(positions: PositionSample[]): void {
+    if (this.useDeckGL) {
+      this.deckGLMap?.setAircraftPositions(positions);
+    } else {
+      this.svgMap?.setAircraftPositions(positions);
+    }
+  }
+
   public setMilitaryFlights(flights: MilitaryFlight[], clusters: MilitaryFlightCluster[] = []): void {
     if (this.useGlobe) { this.globeMap?.setMilitaryFlights(flights); return; }
     if (this.useDeckGL) { this.deckGLMap?.setMilitaryFlights(flights, clusters); } else { this.svgMap?.setMilitaryFlights(flights, clusters); }
@@ -505,6 +513,12 @@ export class MapContainer {
   public setOnLayerChange(callback: (layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void): void {
     if (this.useGlobe) { this.globeMap?.setOnLayerChange(callback); return; }
     if (this.useDeckGL) { this.deckGLMap?.setOnLayerChange(callback); } else { this.svgMap?.setOnLayerChange(callback); }
+  }
+
+  public setOnAircraftPositionsUpdate(callback: (positions: PositionSample[]) => void): void {
+    if (this.useDeckGL) {
+      this.deckGLMap?.setOnAircraftPositionsUpdate(callback);
+    }
   }
 
   public onStateChanged(callback: (state: MapContainerState) => void): void {

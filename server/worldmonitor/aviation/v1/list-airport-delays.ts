@@ -21,7 +21,7 @@ import {
   buildNotamAlert,
 } from './_shared';
 import { CHROME_UA } from '../../../_shared/constants';
-import { cachedFetchJson, getCachedJson } from '../../../_shared/redis';
+import { cachedFetchJson, getCachedJson, setCachedJson } from '../../../_shared/redis';
 
 const FAA_CACHE_KEY = 'aviation:delays:faa:v1';
 const INTL_CACHE_KEY = 'aviation:delays:intl:v3';
@@ -208,6 +208,12 @@ export async function listAirportDelays(
   }
 
   console.log(`[Aviation] Total: ${allAlerts.length} alerts (${normalCount} normal) in ${Date.now() - t0}ms`);
+
+  // Write bootstrap key for initial page load hydration
+  try {
+    await setCachedJson('aviation:delays-bootstrap:v1', { alerts: allAlerts }, 7200);
+  } catch { /* non-critical */ }
+
   return { alerts: allAlerts };
 }
 

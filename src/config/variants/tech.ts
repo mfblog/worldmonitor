@@ -24,8 +24,9 @@ export {
 
 // Tech-specific FEEDS configuration
 import type { Feed } from '@/types';
+import { rssProxyUrl } from '@/utils';
 
-const rss = (url: string) => `/api/rss-proxy?url=${encodeURIComponent(url)}`;
+const rss = rssProxyUrl;
 
 export const FEEDS: Record<string, Feed[]> = {
   // Core Tech News
@@ -214,7 +215,7 @@ export const DEFAULT_PANELS: Record<string, PanelConfig> = {
 export const DEFAULT_MAP_LAYERS: MapLayers = {
   // Keep only relevant layers, set others to false
   gpsJamming: false,
-  geopoliticalBoundaries: false,
+
   conflicts: false,
   bases: false,
   cables: true,
@@ -267,7 +268,7 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
 // Mobile defaults for tech variant
 export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
-  geopoliticalBoundaries: false,
+
   conflicts: false,
   bases: false,
   cables: false,

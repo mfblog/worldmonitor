@@ -1,13 +1,9 @@
-import { isDesktopRuntime } from '@/services/runtime';
-import { proxyUrl } from '@/utils';
+import { rssProxyUrl } from '@/utils';
 import { getPersistentCache, setPersistentCache } from './persistent-cache';
 import { dataFreshness } from './data-freshness';
 import { nameToCountryCode, matchCountryNamesInText } from './country-geometry';
 
-function advisoryFeedUrl(feedUrl: string): string {
-  if (isDesktopRuntime()) return proxyUrl(feedUrl);
-  return `/api/rss-proxy?url=${encodeURIComponent(feedUrl)}`;
-}
+const advisoryFeedUrl = rssProxyUrl;
 
 export interface SecurityAdvisory {
   title: string;

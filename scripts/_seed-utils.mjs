@@ -9,10 +9,6 @@ const MAX_PAYLOAD_BYTES = 5 * 1024 * 1024; // 5MB per key
 
 export { CHROME_UA };
 
-export function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 export function loadEnvFile(metaUrl) {
   const __dirname = metaUrl ? dirname(fileURLToPath(metaUrl)) : process.cwd();
   const candidates = [
@@ -188,6 +184,23 @@ export async function verifySeedKey(key) {
   return data;
 }
 
+export async function writeExtraKey(key, data, ttl) {
+  const { url, token } = getRedisCredentials();
+  const payload = JSON.stringify(data);
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(['SET', key, payload, 'EX', ttl]),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!resp.ok) console.warn(`  Extra key ${key}: write failed (HTTP ${resp.status})`);
+  else console.log(`  Extra key ${key}: written`);
+}
+
+export function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export function parseYahooChart(data, symbol) {
   const result = data?.chart?.result?.[0];
   const meta = result?.meta;
@@ -202,21 +215,8 @@ export function parseYahooChart(data, symbol) {
   return { symbol, name: symbol, display: symbol, price, change: +change.toFixed(2), sparkline };
 }
 
-export async function writeExtraKey(key, data, ttl) {
-  const { url, token } = getRedisCredentials();
-  const payload = JSON.stringify(data);
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(['SET', key, payload, 'EX', ttl]),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!resp.ok) console.warn(`  Extra key ${key}: write failed (HTTP ${resp.status})`);
-  else console.log(`  Extra key ${key}: written`);
-}
-
 export async function runSeed(domain, resource, canonicalKey, fetchFn, opts = {}) {
-  const { validateFn, ttlSeconds, lockTtlMs = 120_000 } = opts;
+  const { validateFn, ttlSeconds, lockTtlMs = 120_000, extraKeys } = opts;
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const startMs = Date.now();
 
@@ -228,7 +228,7 @@ export async function runSeed(domain, resource, canonicalKey, fetchFn, opts = {}
   const locked = await acquireLock(`${domain}:${resource}`, runId, lockTtlMs);
   if (!locked) {
     console.log('  SKIPPED: another seed run in progress');
-    return { skipped: true };
+    process.exit(0);
   }
 
   try {
@@ -236,7 +236,15 @@ export async function runSeed(domain, resource, canonicalKey, fetchFn, opts = {}
     const { payloadBytes } = await atomicPublish(canonicalKey, data, validateFn, ttlSeconds);
     const recordCount = Array.isArray(data) ? data.length
       : (data?.events?.length ?? data?.earthquakes?.length ?? data?.outages?.length
-        ?? data?.fireDetections?.length ?? data?.anomalies?.length ?? data?.threats?.length ?? 0);
+        ?? data?.fireDetections?.length ?? data?.anomalies?.length ?? data?.threats?.length
+        ?? data?.quotes?.length ?? data?.stablecoins?.length ?? 0);
+
+    // Write extra keys (e.g., bootstrap hydration keys)
+    if (extraKeys) {
+      for (const ek of extraKeys) {
+        await writeExtraKey(ek.key, ek.transform ? ek.transform(data) : data, ek.ttl || ttlSeconds);
+      }
+    }
 
     const meta = await writeFreshnessMetadata(domain, resource, recordCount, opts.sourceVersion);
 
@@ -252,8 +260,10 @@ export async function runSeed(domain, resource, canonicalKey, fetchFn, opts = {}
     }
 
     console.log(`\n=== Done (${Math.round(durationMs)}ms) ===`);
-    return { success: true, recordCount, durationMs, meta };
-  } finally {
     await releaseLock(`${domain}:${resource}`, runId);
+    process.exit(0);
+  } catch (err) {
+    await releaseLock(`${domain}:${resource}`, runId);
+    throw err;
   }
 }

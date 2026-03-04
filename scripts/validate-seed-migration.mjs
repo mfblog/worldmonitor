@@ -109,15 +109,6 @@ const TESTS = [
     field: 'stablecoins',
   },
 
-  // Aviation
-  {
-    name: 'Airport Delays',
-    endpoint: '/api/aviation/v1/list-airport-delays',
-    validate: (d) => Array.isArray(d.alerts),
-    minRecords: 50,
-    field: 'alerts',
-  },
-
   // Phase 3 — Hybrid endpoints
   {
     name: 'Natural Events',
@@ -282,14 +273,10 @@ async function main() {
       'climate:anomalies': 'Climate Anomalies',
       'unrest:events': 'Unrest Events',
       'cyber:threats': 'Cyber Threats',
-      'market:quotes': 'Market Quotes',
-      'market:commodities': 'Commodity Quotes',
       'market:crypto': 'Crypto Quotes',
       'market:etf-flows': 'ETF Flows',
       'market:gulf-quotes': 'Gulf Quotes',
       'market:stablecoins': 'Stablecoin Markets',
-      'aviation:faa': 'Airport Delays',
-      'aviation:notam': 'Airport Delays',
       'natural:events': 'Natural Events',
       'displacement:summary': 'Displacement Summary',
     };

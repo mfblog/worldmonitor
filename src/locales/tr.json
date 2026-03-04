@@ -821,7 +821,8 @@
         "elevated": "Artmis",
         "monitoring": "Izleme",
         "base": "Us",
-        "nuclear": "Nukleer"
+        "nuclear": "Nukleer",
+        "aircraft": "Uçak"
       },
       "layerGuide": "Katman Rehberi",
       "layersTitle": "Katmanlar",
@@ -857,7 +858,7 @@
         "pipelines": "Boru Hatlari",
         "militaryActivity": "Askeri Faaliyet",
         "shipTraffic": "Gemi Trafigi",
-        "flightDelays": "Ucus Gecikmeleri",
+        "flightDelays": "Havacilik",
         "protests": "Protestolar",
         "ucdpEvents": "UCDP Olaylari",
         "displacementFlows": "Yerinden Edilme Akislari",
@@ -874,8 +875,7 @@
         "tradeRoutes": "Ticaret Rotaları",
         "gpsJamming": "GPS JAMMING",
         "dayNight": "Gündüz/Gece",
-        "iranAttacks": "İran Saldırıları",
-        "geopoliticalBoundaries": "Jeopolitik Sınırlar"
+        "iranAttacks": "İran Saldırıları"
       },
       "tooltip": {
         "earthquake": "Deprem",
@@ -1594,6 +1594,14 @@
         "africa": "Afrika"
       }
     },
+    "aircraft": {
+      "altitude": "Irtifa",
+      "speed": "Yer Hizi",
+      "heading": "Yon",
+      "position": "Konum",
+      "ground": "Yerde",
+      "airborne": "Havada"
+    },
     "apt": {
       "description": "Devlet duzeyli yeteneklere sahip Gelismis Kalici Tehdit grubu. Kritik altyapi, hukumet ve savunma sektorlerini hedef alan sofistike siber operasyonlariyla bilinir."
     },
@@ -1981,19 +1989,6 @@
     },
     "iranEvent": {
       "relatedEvents": "İlgili Olaylar"
-    },
-    "geopoliticalBoundary": {
-      "title": "JEOPOLİTİK SINIR",
-      "established": "KURULDU",
-      "dimensions": "BOYUTLAR",
-      "legalBasis": "HUKUKİ DAYANAK",
-      "parties": "İMZACILAR",
-      "types": {
-        "demilitarized": "ASKERSİZ BÖLGE",
-        "ceasefire": "ATEŞKES HATTI",
-        "disputed": "TARTIŞMALI SINIR",
-        "armistice": "MÜTAREKEHATTİ"
-      }
     }
   },
   "signals": {

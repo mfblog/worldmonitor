@@ -10,6 +10,7 @@ import { escapeHtml } from '@/utils/sanitize';
 import { trackLanguageChange } from '@/services/analytics';
 import type { PanelConfig } from '@/types';
 import type { StatusPanel } from './StatusPanel';
+import { exportSettings, importSettings, type ImportResult } from '@/utils/settings-persistence';
 
 const GEAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
 
@@ -145,6 +146,22 @@ export class UnifiedSettings {
         this.updateSourcesCounter();
         return;
       }
+
+      if (target.closest('#usExportBtn')) {
+        try {
+          exportSettings();
+          this.showDataMgmtToast(t('components.settings.exportSuccess'), true);
+        } catch {
+          this.showDataMgmtToast(t('components.settings.exportFailed'), false);
+        }
+        return;
+      }
+
+      if (target.closest('#usImportBtn')) {
+        const input = this.overlay.querySelector<HTMLInputElement>('#usImportInput');
+        input?.click();
+        return;
+      }
     });
 
     // Handle input events for search
@@ -163,6 +180,18 @@ export class UnifiedSettings {
     // Handle change events for toggles and language select
     this.overlay.addEventListener('change', (e) => {
       const target = e.target as HTMLInputElement;
+
+      if (target.id === 'usImportInput') {
+        const file = target.files?.[0];
+        if (!file) return;
+        importSettings(file).then((result: ImportResult) => {
+          this.showDataMgmtToast(t('components.settings.importSuccess', { count: String(result.keysImported) }), true);
+        }).catch(() => {
+          this.showDataMgmtToast(t('components.settings.importFailed'), false);
+        });
+        target.value = '';
+        return;
+      }
 
       // Stream quality select
       if (target.id === 'us-stream-quality') {
@@ -425,6 +454,16 @@ export class UnifiedSettings {
     }
     html += `</select>`;
 
+    // Data Management section
+    html += `<div class="ai-flow-section-label">${t('components.settings.dataManagementLabel')}</div>`;
+    html += `
+      <div class="us-data-mgmt">
+        <button type="button" class="settings-btn settings-btn-secondary" id="usExportBtn">${t('components.settings.exportSettings')}</button>
+        <button type="button" class="settings-btn settings-btn-secondary" id="usImportBtn">${t('components.settings.importSettings')}</button>
+        <input type="file" id="usImportInput" accept=".json" class="us-hidden-input" />
+      </div>
+      <div class="us-data-mgmt-toast" id="usDataMgmtToast"></div>
+    `;
     // Community section
     html += `<div class="ai-flow-section-label">${t('components.community.sectionLabel')}</div>`;
     html += `<a href="https://github.com/koala73/worldmonitor/discussions/94" target="_blank" rel="noopener" class="us-discussion-link">
@@ -475,6 +514,19 @@ export class UnifiedSettings {
       dot.classList.add('disabled');
       text.textContent = t('components.insights.aiFlowStatusDisabled');
     }
+  }
+
+  private showDataMgmtToast(msg: string, success: boolean): void {
+    const toast = this.overlay.querySelector('#usDataMgmtToast');
+    if (!toast) return;
+    toast.className = `us-data-mgmt-toast ${success ? 'ok' : 'error'}`;
+    toast.innerHTML = success
+      ? `${escapeHtml(msg)} <a href="#" class="us-toast-reload">${t('components.settings.reloadNow')}</a>`
+      : escapeHtml(msg);
+    toast.querySelector('.us-toast-reload')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.reload();
+    });
   }
 
   public refreshStatusTab(): void {

@@ -8248,6 +8248,38 @@ a.prediction-link:hover {
   margin-right: 4px;
 }
 
+/* Mobile search FAB — always visible floating button */
+.search-mobile-fab {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .search-mobile-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+    width: 56px;
+    height: 56px;
+    background: var(--accent, #4488ff);
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 20px rgba(68, 136, 255, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 500;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .search-mobile-fab:active {
+    transform: scale(0.9);
+    opacity: 0.85;
+  }
+}
+
 /* Mobile bottom sheet search */
 .search-overlay.search-mobile {
   align-items: flex-end;
@@ -8365,6 +8397,14 @@ a.prediction-link:hover {
   .search-overlay.search-mobile .search-section-header {
     font-size: 11px;
     padding: 10px 16px;
+  }
+
+  .search-overlay.search-mobile .search-result-subtitle {
+    display: none;
+  }
+
+  .search-overlay.search-mobile .search-result-type {
+    display: none;
   }
 }
 
@@ -9861,7 +9901,7 @@ a.prediction-link:hover {
   }
 
   .mobile-search-btn {
-    display: flex;
+    display: none;
   }
 
   .mobile-menu-overlay {
@@ -14448,6 +14488,45 @@ a.prediction-link:hover {
   border-radius: 50%;
   background: hsl(229, 48%, 55%);
   flex-shrink: 0;
+}
+
+/* Data management buttons in settings */
+.us-data-mgmt {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px 12px;
+}
+
+.us-data-mgmt .settings-btn {
+  flex: 1;
+}
+
+.us-hidden-input {
+  display: none;
+}
+
+.us-data-mgmt-toast {
+  padding: 0 16px;
+  font-size: 12px;
+  min-height: 0;
+  transition: opacity 0.2s;
+}
+
+.us-data-mgmt-toast:empty {
+  display: none;
+}
+
+.us-data-mgmt-toast.ok {
+  color: #34d399;
+}
+
+.us-data-mgmt-toast.error {
+  color: #f87171;
+}
+
+.us-toast-reload {
+  color: #60a5fa;
+  margin-left: 6px;
 }
 
 /* Footer status */

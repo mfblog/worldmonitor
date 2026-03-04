@@ -874,8 +874,7 @@
         "tradeRoutes": "Routes Commerciales",
         "gpsJamming": "GPS JAMMING",
         "dayNight": "Jour/Nuit",
-        "iranAttacks": "Attaques iraniennes",
-        "geopoliticalBoundaries": "Frontières Géopolitiques"
+        "iranAttacks": "Attaques iraniennes"
       },
       "tooltip": {
         "earthquake": "Tremblement de terre",
@@ -1031,6 +1030,16 @@
       "headlineMemoryDesc": "Mémoriser les titres vus pour mettre en évidence les nouveaux",
       "streamAlwaysOnLabel": "Garder les flux en direct actifs",
       "streamAlwaysOnDesc": "Empêche la mise en pause automatique de Live Cams et Live News lorsque vous êtes inactif. Recommandé pour un second écran / usage wallboard. Désactivez (Éco) pour économiser CPU/bande passante."
+    },
+    "settings": {
+      "dataManagementLabel": "Gestion des données",
+      "exportSettings": "Exporter les paramètres",
+      "importSettings": "Importer les paramètres",
+      "exportSuccess": "Paramètres exportés avec succès",
+      "exportFailed": "Échec de l'exportation des paramètres",
+      "importSuccess": "{{count}} paramètres importés",
+      "importFailed": "Échec de l'importation des paramètres",
+      "reloadNow": "Recharger maintenant"
     },
     "cascade": {
       "noImpacts": "Aucun impact pays détecté",
@@ -1981,19 +1990,6 @@
       "uae_ecsr": "EAU/CEDS",
       "venezuela_crisis": "Crise au Venezuela",
       "yemen_houthis": "Yémen/Houtis"
-    },
-    "geopoliticalBoundary": {
-      "title": "FRONTIÈRE GÉOPOLITIQUE",
-      "established": "ÉTABLI",
-      "dimensions": "DIMENSIONS",
-      "legalBasis": "BASE LÉGALE",
-      "parties": "SIGNATAIRES",
-      "types": {
-        "demilitarized": "ZONE DÉMILITARISÉE",
-        "ceasefire": "LIGNE DE CESSEZ-LE-FEU",
-        "disputed": "FRONTIÈRE CONTESTÉE",
-        "armistice": "LIGNE D'ARMISTICE"
-      }
     }
   },
   "signals": {
@@ -2178,3 +2174,4 @@
     "rateLimitedMarket": "Données de marché temporairement limitées — nouvelle tentative automatique"
   }
 }
+

@@ -27,6 +27,8 @@ const BOOTSTRAP_CACHE_KEYS = {
   theaterPosture: 'theater-posture:sebuf:stale:v1',
   riskScores: 'risk:scores:sebuf:stale:v1',
   naturalEvents: 'natural:events:v1',
+  flightDelays: 'aviation:delays-bootstrap:v1',
+  insights: 'news:insights:v1',
 };
 
 const SLOW_KEYS = new Set([
@@ -36,7 +38,7 @@ const SLOW_KEYS = new Set([
 ]);
 const FAST_KEYS = new Set([
   'earthquakes', 'outages', 'serviceStatuses', 'macroSignals', 'chokepoints',
-  'marketQuotes', 'commodityQuotes', 'positiveGeoEvents', 'riskScores',
+  'marketQuotes', 'commodityQuotes', 'positiveGeoEvents', 'riskScores', 'flightDelays','insights',
 ]);
 
 const TIER_CACHE = {

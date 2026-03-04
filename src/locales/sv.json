@@ -497,8 +497,7 @@
         "tradeRoutes": "Handelsrutter",
         "gpsJamming": "GPS JAMMING",
         "dayNight": "Dag/Natt",
-        "iranAttacks": "Iran-attacker",
-        "geopoliticalBoundaries": "Geopolitiska Gränser"
+        "iranAttacks": "Iran-attacker"
       },
       "layersTitle": "Lager",
       "layerGuide": "Lagerguide",
@@ -1835,19 +1834,6 @@
     },
     "iranEvent": {
       "relatedEvents": "Relaterade händelser"
-    },
-    "geopoliticalBoundary": {
-      "title": "GEOPOLITISK GRÄNS",
-      "established": "UPPRÄTTAD",
-      "dimensions": "DIMENSIONER",
-      "legalBasis": "RÄTTSLIG GRUND",
-      "parties": "UNDERTECKNARE",
-      "types": {
-        "demilitarized": "DEMILITARISERAD ZON",
-        "ceasefire": "ELDUPPHÖRSLINJE",
-        "disputed": "OMTVISTAD GRÄNS",
-        "armistice": "VAPENSTILLESTÅNDSLINJE"
-      }
     }
   },
   "signals": {

@@ -1,6 +1,7 @@
 import './styles/main.css';
 import './styles/settings-window.css';
 import { SettingsManager } from '@/services/settings-manager';
+import { exportSettings, importSettings, type ImportResult } from '@/utils/settings-persistence';
 import {
   SETTINGS_CATEGORIES,
   HUMAN_LABELS,
@@ -215,6 +216,15 @@ function renderOverview(area: HTMLElement): void {
         </div>
       </div>
       <div class="settings-ov-cats">${catCards}</div>
+      <div class="settings-ov-actions">
+        <button type="button" class="settings-btn settings-btn-secondary" id="exportSettingsBtn">
+          ${t('components.settings.exportSettings')}
+        </button>
+        <button type="button" class="settings-btn settings-btn-secondary" id="importSettingsBtn">
+          ${t('components.settings.importSettings')}
+        </button>
+        <input type="file" id="importSettingsInput" accept=".json" style="display: none;" />
+      </div>
     </div>
 
     <div class="settings-ov-license">
@@ -258,6 +268,39 @@ function renderOverview(area: HTMLElement): void {
 }
 
 function initOverviewListeners(area: HTMLElement): void {
+  area.querySelector('#exportSettingsBtn')?.addEventListener('click', () => {
+    exportSettings();
+  });
+
+  const importInput = area.querySelector<HTMLInputElement>('#importSettingsInput');
+  area.querySelector('#importSettingsBtn')?.addEventListener('click', () => {
+    importInput?.click();
+  });
+
+  importInput?.addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    try {
+      const result: ImportResult = await importSettings(file);
+      setActionStatus(t('components.settings.importSuccess', { count: String(result.keysImported) }), 'ok');
+    } catch (err: unknown) {
+      if (err instanceof DOMException) {
+        if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+          setActionStatus(t('components.settings.importFailed') + ': storage limit reached', 'error');
+        } else if (err.name === 'SecurityError') {
+          setActionStatus(t('components.settings.importFailed') + ': storage blocked', 'error');
+        } else {
+          setActionStatus(`${t('components.settings.importFailed')}: ${err.message || err.name}`, 'error');
+        }
+      } else if (err instanceof Error && err.message) {
+        setActionStatus(`${t('components.settings.importFailed')}: ${err.message}`, 'error');
+      } else {
+        setActionStatus(t('components.settings.importFailed'), 'error');
+      }
+    }
+    importInput.value = '';
+  });
+
   area.querySelector('[data-wm-toggle]')?.addEventListener('click', () => {
     const input = area.querySelector<HTMLInputElement>('[data-wm-key-input]');
     if (input) input.type = input.type === 'password' ? 'text' : 'password';

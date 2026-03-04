@@ -47,3 +47,5 @@ export * from './TelegramIntelPanel';
 export * from './BreakingNewsBanner';
 export * from './GulfEconomiesPanel';
 export * from './WorldClockPanel';
+export { AirlineIntelPanel } from './AirlineIntelPanel';
+export { AviationCommandBar } from './AviationCommandBar';

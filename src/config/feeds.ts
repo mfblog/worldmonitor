@@ -1,12 +1,9 @@
 import type { Feed } from '@/types';
 import { SITE_VARIANT } from './variant';
+import { rssProxyUrl } from '@/utils';
 
-// Helper to create RSS proxy URL (Vercel)
-const rss = (url: string) => `/api/rss-proxy?url=${encodeURIComponent(url)}`;
-
-// Keep dedicated alias for feeds historically fetched through Railway.
-// `rss-proxy` now handles secure server-side fallback.
-const railwayRss = (url: string) => rss(url);
+const rss = rssProxyUrl;
+const railwayRss = rssProxyUrl;
 
 // Source tier system for prioritization (lower = more authoritative)
 // Tier 1: Wire services - fastest, most reliable breaking news

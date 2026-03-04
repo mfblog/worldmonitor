@@ -1,7 +1,7 @@
 import { SITE_VARIANT } from '@/config/variant';
 
 const WS_API_URL = import.meta.env.VITE_WS_API_URL || '';
-const KEYED_CLOUD_API_PATTERN = /^\/api\/(?:[^/]+\/v1\/|bootstrap(?:\?|$)|rss-proxy(?:\?|$)|polymarket(?:\?|$)|ais-snapshot(?:\?|$))/;
+const KEYED_CLOUD_API_PATTERN = /^\/api\/(?:[^/]+\/v1\/|bootstrap(?:\?|$)|polymarket(?:\?|$)|ais-snapshot(?:\?|$))/;
 
 const DEFAULT_REMOTE_HOSTS: Record<string, string> = {
   tech: WS_API_URL,

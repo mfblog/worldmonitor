@@ -13,6 +13,34 @@ const edgeFunctions = readdirSync(apiDir)
   .filter((f) => f.endsWith('.js') && !f.startsWith('_'))
   .map((f) => ({ name: f, path: join(apiDir, f) }));
 
+// ALL .js files in api/ (including helpers) — used for node: built-in checks
+const allApiFiles = readdirSync(apiDir)
+  .filter((f) => f.endsWith('.js'))
+  .map((f) => ({ name: f, path: join(apiDir, f) }));
+
+describe('Edge Function shared helpers resolve', () => {
+  it('_rss-allowed-domains.js re-exports shared domain list', async () => {
+    const mod = await import(join(apiDir, '_rss-allowed-domains.js'));
+    const domains = mod.default;
+    assert.ok(Array.isArray(domains), 'Expected default export to be an array');
+    assert.ok(domains.length > 200, `Expected 200+ domains, got ${domains.length}`);
+    assert.ok(domains.includes('feeds.bbci.co.uk'), 'Expected BBC feed domain in list');
+  });
+});
+
+describe('Edge Function no node: built-ins', () => {
+  for (const { name, path } of allApiFiles) {
+    it(`${name} does not import node: built-ins (unsupported in Vercel Edge Runtime)`, () => {
+      const src = readFileSync(path, 'utf-8');
+      const match = src.match(/from\s+['"]node:(\w+)['"]/);
+      assert.ok(
+        !match,
+        `${name}: imports node:${match?.[1]} — Vercel Edge Runtime does not support node: built-in modules. Use an edge-compatible alternative.`,
+      );
+    });
+  }
+});
+
 describe('Edge Function module isolation', () => {
   for (const { name, path } of edgeFunctions) {
     it(`${name} does not import from ../server/ (Edge Functions cannot resolve cross-directory TS)`, () => {

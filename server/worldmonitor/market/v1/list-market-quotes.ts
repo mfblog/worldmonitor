@@ -33,22 +33,16 @@ export async function listMarketQuotes(
   const parsedSymbols = parseStringArray(req.symbols);
   const key = cacheKey(parsedSymbols);
 
-  // Layer 0: seed-first — read from Railway seed with freshness check
-  const SEED_FRESHNESS_MS = 15 * 60 * 1000;
+  // Layer 0: bootstrap/seed data (written by Railway ais-relay)
   try {
-    const meta = await getCachedJson('seed-meta:market:quotes', true) as { fetchedAt?: number } | null;
-    const seedAge = meta?.fetchedAt ? now - meta.fetchedAt : Infinity;
     const bootstrap = await getCachedJson('market:stocks-bootstrap:v1', true) as ListMarketQuotesResponse | null;
     if (bootstrap?.quotes?.length) {
       const symbolSet = new Set(parsedSymbols);
       const filtered = bootstrap.quotes.filter((q: MarketQuote) => symbolSet.has(q.symbol));
       if (filtered.length > 0) {
-        const isFresh = seedAge < SEED_FRESHNESS_MS;
-        if (isFresh || !process.env.SEED_FALLBACK_MARKET) {
-          const resp: ListMarketQuotesResponse = { quotes: filtered, finnhubSkipped: false, skipReason: '', rateLimited: false };
-          quotesCache.set(key, { data: resp, timestamp: now });
-          return resp;
-        }
+        const resp: ListMarketQuotesResponse = { quotes: filtered, finnhubSkipped: false, skipReason: '', rateLimited: false };
+        quotesCache.set(key, { data: resp, timestamp: now });
+        return resp;
       }
     }
   } catch {}

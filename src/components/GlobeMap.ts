@@ -17,7 +17,7 @@
 import Globe from 'globe.gl';
 import { isDesktopRuntime } from '@/services/runtime';
 import type { GlobeInstance, ConfigOptions } from 'globe.gl';
-import { INTEL_HOTSPOTS, CONFLICT_ZONES, GEOPOLITICAL_BOUNDARIES, MILITARY_BASES, NUCLEAR_FACILITIES, SPACEPORTS, ECONOMIC_CENTERS, STRATEGIC_WATERWAYS, CRITICAL_MINERALS, UNDERSEA_CABLES } from '@/config/geo';
+import { INTEL_HOTSPOTS, CONFLICT_ZONES, MILITARY_BASES, NUCLEAR_FACILITIES, SPACEPORTS, ECONOMIC_CENTERS, STRATEGIC_WATERWAYS, CRITICAL_MINERALS, UNDERSEA_CABLES } from '@/config/geo';
 import { PIPELINES } from '@/config/pipelines';
 import { t } from '@/services/i18n';
 import { SITE_VARIANT } from '@/config/variant';
@@ -284,10 +284,13 @@ interface GlobePath {
 interface GlobePolygon {
   coords: number[][][];
   name: string;
-  _kind: 'boundary' | 'cii';
+  _kind: 'cii' | 'conflict';
   level?: string;
   score?: number;
-  boundaryType?: string;
+
+  intensity?: string;
+  parties?: string[];
+  casualties?: string;
 }
 type GlobeMarker =
   | ConflictMarker | HotspotMarker | FlightMarker | VesselMarker
@@ -561,12 +564,13 @@ export class GlobeMap {
 
     // Flush any data that arrived before init completed
     this.flushMarkers();
+    this.flushPolygons();
 
     // Load countries GeoJSON for CII choropleth
     getCountriesGeoJson().then(geojson => {
       if (geojson && !this.destroyed) {
         this.countriesGeoData = geojson;
-        if (this.ciiScoresMap.size > 0) this.flushPolygons();
+        this.flushPolygons();
       }
     }).catch(err => { if (import.meta.env.DEV) console.warn('[GlobeMap] Failed to load countries GeoJSON', err); });
   }
@@ -695,22 +699,16 @@ export class GlobeMap {
     } else if (d._kind === 'conflictZone') {
       const intColor = d.intensity === 'high' ? '#ff2020' : d.intensity === 'medium' ? '#ff8800' : '#ffcc00';
       el.innerHTML = `
-        <div style="position:relative;width:28px;height:28px;">
+        <div style="position:relative;width:20px;height:20px;">
           <div style="
             position:absolute;inset:0;border-radius:50%;
             background:${intColor}33;
-            border:2px solid ${intColor}99;
-            box-shadow:0 0 10px 4px ${intColor}44;
-          "></div>
-          <div style="
-            position:absolute;inset:-6px;border-radius:50%;
-            background:${intColor}11;
-            border:1px solid ${intColor}44;
-            animation:globe-pulse 2.5s ease-out infinite;
+            border:1.5px solid ${intColor}99;
+            box-shadow:0 0 6px 2px ${intColor}44;
           "></div>
           <div style="
             position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-            font-size:11px;line-height:1;color:${intColor};
+            font-size:9px;line-height:1;color:${intColor};
           ">⚔</div>
         </div>`;
       el.title = d.name;
@@ -1213,13 +1211,50 @@ export class GlobeMap {
     critical: 'rgba(140, 10, 0, 0.50)',
   };
 
+
   private flushPolygons(): void {
     if (!this.globe || !this.initialized || this.destroyed) return;
     const polys: GlobePolygon[] = [];
 
+
+
     if (this.layers.conflicts) {
-      for (const b of GEOPOLITICAL_BOUNDARIES) {
-        polys.push({ coords: [b.coords], name: b.name, _kind: 'boundary', boundaryType: b.boundaryType });
+      // Map conflict zone IDs to ISO-2 country codes for real GeoJSON geometry lookup.
+      // Using actual country geometries from countriesGeoData ensures correct rendering
+      // (same approach as CII choropleth which renders correctly).
+      const CONFLICT_ISO: Record<string, string[]> = {
+        iran: ['IR'],
+        ukraine: ['UA'],
+        gaza: ['PS', 'IL'],
+        sudan: ['SD'],
+        myanmar: ['MM'],
+      };
+      for (const z of CONFLICT_ZONES) {
+        const isoCodes = CONFLICT_ISO[z.id];
+        if (isoCodes && this.countriesGeoData) {
+          for (const feat of this.countriesGeoData.features) {
+            const code = feat.properties?.['ISO3166-1-Alpha-2'] as string | undefined;
+            if (!code || !isoCodes.includes(code)) continue;
+            const geom = feat.geometry;
+            if (!geom) continue;
+            const rings = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
+            for (const ring of rings) {
+              const reversed = ring.map((r: number[][]) => [...r].reverse());
+              polys.push({
+                coords: reversed,
+                name: z.name,
+                _kind: 'conflict',
+                intensity: z.intensity ?? 'low',
+                parties: z.parties,
+                casualties: z.casualties,
+              });
+            }
+          }
+        } else {
+          // Zones without country mapping (Strait of Hormuz, South Lebanon, etc.)
+          // are represented by center markers only — custom simplified polygons
+          // don't render correctly on globe.gl's spherical tessellation.
+        }
       }
     }
 
@@ -1229,6 +1264,7 @@ export class GlobeMap {
         const entry = code ? this.ciiScoresMap.get(code) : undefined;
         if (!entry || !code) continue;
         const geom = feat.geometry;
+        if (!geom) continue;
         const rings = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
         const name = (feat.properties?.name as string) ?? code;
         for (const ring of rings) {
@@ -1238,13 +1274,43 @@ export class GlobeMap {
     }
 
     const colors = GlobeMap.CII_GLOBE_COLORS;
+    const conflictCap: Record<string, string> = { high: 'rgba(255,40,40,0.25)', medium: 'rgba(255,120,0,0.20)', low: 'rgba(255,200,0,0.15)' };
+    const conflictSide: Record<string, string> = { high: 'rgba(255,40,40,0.12)', medium: 'rgba(255,120,0,0.08)', low: 'rgba(255,200,0,0.06)' };
+    const conflictStroke: Record<string, string> = { high: '#ff3030', medium: '#ff8800', low: '#ffcc00' };
+    const conflictAlt: Record<string, number> = { high: 0.006, medium: 0.004, low: 0.003 };
     (this.globe as any)
       .polygonsData(polys)
-      .polygonCapColor((d: GlobePolygon) => d._kind === 'cii' ? (colors[d.level!] ?? 'rgba(0,0,0,0)') : 'rgba(255, 60, 60, 0.15)')
-      .polygonSideColor((d: GlobePolygon) => d._kind === 'cii' ? 'rgba(0,0,0,0)' : 'rgba(255, 60, 60, 0.08)')
-      .polygonStrokeColor((d: GlobePolygon) => d._kind === 'cii' ? 'rgba(80, 80, 80, 0.3)' : '#ff4444')
-      .polygonAltitude((d: GlobePolygon) => d._kind === 'cii' ? 0.002 : 0.005)
-      .polygonLabel((d: GlobePolygon) => d._kind === 'cii' ? `<b>${escapeHtml(d.name)}</b><br/>CII: ${d.score}/100 (${escapeHtml(d.level ?? '')})` : escapeHtml(d.name));
+      .polygonGeoJsonGeometry((d: GlobePolygon) => ({ type: 'Polygon', coordinates: d.coords }))
+      .polygonCapColor((d: GlobePolygon) => {
+        if (d._kind === 'cii') return colors[d.level!] ?? 'rgba(0,0,0,0)';
+        if (d._kind === 'conflict') return conflictCap[d.intensity!] ?? conflictCap.low;
+        return 'rgba(255,60,60,0.15)';
+      })
+      .polygonSideColor((d: GlobePolygon) => {
+        if (d._kind === 'cii') return 'rgba(0,0,0,0)';
+        if (d._kind === 'conflict') return conflictSide[d.intensity!] ?? conflictSide.low;
+        return 'rgba(255,60,60,0.08)';
+      })
+      .polygonStrokeColor((d: GlobePolygon) => {
+        if (d._kind === 'cii') return 'rgba(80,80,80,0.3)';
+        if (d._kind === 'conflict') return conflictStroke[d.intensity!] ?? conflictStroke.low;
+        return '#ff4444';
+      })
+      .polygonAltitude((d: GlobePolygon) => {
+        if (d._kind === 'cii') return 0.002;
+        if (d._kind === 'conflict') return conflictAlt[d.intensity!] ?? conflictAlt.low;
+        return 0.005;
+      })
+      .polygonLabel((d: GlobePolygon) => {
+        if (d._kind === 'cii') return `<b>${escapeHtml(d.name)}</b><br/>CII: ${d.score}/100 (${escapeHtml(d.level ?? '')})`;
+        if (d._kind === 'conflict') {
+          let label = `<b>${escapeHtml(d.name)}</b>`;
+          if (d.parties?.length) label += `<br/>Parties: ${d.parties.map(p => escapeHtml(p)).join(', ')}`;
+          if (d.casualties) label += `<br/>Casualties: ${escapeHtml(d.casualties)}`;
+          return label;
+        }
+        return escapeHtml(d.name);
+      });
   }
 
   // ─── Public data setters ──────────────────────────────────────────────────
@@ -1439,12 +1505,14 @@ export class GlobeMap {
     // dayNight toggle excluded by catalog — harmless if true in memory
     this.layers = { ...layers };
     this.flushMarkers();
+    this.flushPolygons();
   }
 
   public enableLayer(layer: keyof MapLayers): void {
     // dayNight toggle excluded by catalog — no guard needed
     (this.layers as any)[layer] = true;
     this.flushMarkers();
+    this.flushPolygons();
   }
 
   // ─── Camera / navigation ──────────────────────────────────────────────────

@@ -12,15 +12,12 @@ const SEED_DOMAINS = {
   // Phase 2 — Parameterized endpoints
   'unrest:events':            { key: 'seed-meta:unrest:events',            intervalMin: 15 },
   'cyber:threats':            { key: 'seed-meta:cyber:threats',            intervalMin: 120 },
-  'market:quotes':            { key: 'seed-meta:market:quotes',            intervalMin: 10 },
-  'market:commodities':       { key: 'seed-meta:market:commodities',       intervalMin: 20 },
+  // market:quotes and market:commodities seeded by ais-relay (separate monitoring)
   'market:crypto':            { key: 'seed-meta:market:crypto',            intervalMin: 10 },
   'market:etf-flows':         { key: 'seed-meta:market:etf-flows',         intervalMin: 30 },
   'market:gulf-quotes':       { key: 'seed-meta:market:gulf-quotes',       intervalMin: 15 },
   'market:stablecoins':       { key: 'seed-meta:market:stablecoins',       intervalMin: 30 },
   // Phase 3 — Hybrid endpoints
-  'aviation:faa':             { key: 'seed-meta:aviation:faa',             intervalMin: 30 },
-  'aviation:notam':           { key: 'seed-meta:aviation:notam',           intervalMin: 30 },
   'natural:events':           { key: 'seed-meta:natural:events',           intervalMin: 30 },
   'displacement:summary':     { key: 'seed-meta:displacement:summary',     intervalMin: 360 },
 };

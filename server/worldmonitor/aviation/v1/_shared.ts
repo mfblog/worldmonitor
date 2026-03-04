@@ -14,11 +14,24 @@ import {
 } from '../../../../src/config/airports';
 import { CHROME_UA } from '../../../_shared/constants';
 
+/**
+ * Defensive parser for repeated-string query params.
+ * The sebuf codegen assigns `params.get("airports")` (a string) to a field
+ * typed as `string[]`.  At runtime `req.airports` may therefore be a
+ * comma-separated string rather than an actual array.
+ */
+export function parseStringArray(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (typeof raw === 'string' && raw.length > 0) return raw.split(',').filter(Boolean);
+  return [];
+}
+
 // ---------- Constants ----------
 
 export const FAA_URL = 'https://nasstatus.faa.gov/api/airport-status-information';
 export const AVIATIONSTACK_URL = 'https://api.aviationstack.com/v1/flights';
 export const ICAO_NOTAM_URL = 'https://dataservices.icao.int/api/notams-realtime-list';
+export const DEFAULT_WATCHED_AIRPORTS = ['IST', 'ESB', 'SAW', 'LHR', 'FRA', 'CDG'];
 const BATCH_CONCURRENCY = 10;
 const MIN_FLIGHTS_FOR_CLOSURE = 10;
 const NOTAM_CLOSURE_QCODES = new Set(['FA', 'AH', 'AL', 'AW', 'AC', 'AM']);
@@ -244,7 +257,12 @@ async function fetchSingleAirport(
   apiKey: string, airport: MonitoredAirport
 ): Promise<FetchResult> {
   try {
-    const url = `${AVIATIONSTACK_URL}?access_key=${apiKey}&dep_iata=${airport.iata}&limit=100`;
+    const params = new URLSearchParams({
+      access_key: apiKey,
+      dep_iata: airport.iata,
+      limit: '100',
+    });
+    const url = `${AVIATIONSTACK_URL}?${params}`;
     const resp = await fetch(url, {
       headers: { 'User-Agent': CHROME_UA },
       signal: AbortSignal.timeout(5_000),
@@ -350,7 +368,7 @@ export interface NotamClosureResult {
   notamsByIcao: Map<string, string>;
 }
 
-function getRelayBaseUrl(): string | null {
+export function getRelayBaseUrl(): string | null {
   const relayUrl = process.env.WS_RELAY_URL;
   if (!relayUrl) return null;
   return relayUrl
@@ -359,7 +377,7 @@ function getRelayBaseUrl(): string | null {
     .replace(/\/$/, '');
 }
 
-function getRelayHeaders(): Record<string, string> {
+export function getRelayHeaders(_extra: Record<string, string> = {}): Record<string, string> {
   const headers: Record<string, string> = { 'User-Agent': CHROME_UA };
   const relaySecret = process.env.RELAY_SHARED_SECRET;
   if (relaySecret) {

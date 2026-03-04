@@ -172,7 +172,7 @@ export function chunkArray<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
-export { proxyUrl, fetchWithProxy } from './proxy';
+export { proxyUrl, fetchWithProxy, rssProxyUrl } from './proxy';
 export { exportToJSON, exportToCSV, ExportPanel } from './export';
 export { buildMapUrl, parseMapUrlState } from './urlState';
 export type { ParsedMapUrlState } from './urlState';

@@ -1,4 +1,5 @@
 import type { AppContext, AppModule } from '@/app/app-context';
+import type { AirlineIntelPanel } from '@/components/AirlineIntelPanel';
 import type { PanelConfig } from '@/types';
 import type { MapView } from '@/components';
 import type { ClusteredEvent } from '@/types';
@@ -240,6 +241,7 @@ export class EventHandlerManager implements AppModule {
     };
     document.getElementById('searchBtn')?.addEventListener('click', openSearch);
     document.getElementById('mobileSearchBtn')?.addEventListener('click', openSearch);
+    document.getElementById('searchMobileFab')?.addEventListener('click', openSearch);
 
     document.getElementById('copyLinkBtn')?.addEventListener('click', async () => {
       const shareUrl = this.getShareUrl();
@@ -904,9 +906,21 @@ export class EventHandlerManager implements AppModule {
         return;
       }
 
+      if (layer === 'flights') {
+        const airlineIntel = this.ctx.panels['airline-intel'] as AirlineIntelPanel | undefined;
+        airlineIntel?.setLiveMode(enabled);
+      }
+
       if (enabled) {
         this.callbacks.loadDataForLayer(layer);
       }
+    });
+
+    // Forward live aircraft positions from map to AirlineIntelPanel + cache
+    this.ctx.map?.setOnAircraftPositionsUpdate((positions) => {
+      this.ctx.intelligenceCache.aircraftPositions = positions;
+      const airlineIntel = this.ctx.panels['airline-intel'] as AirlineIntelPanel | undefined;
+      airlineIntel?.updateLivePositions(positions);
     });
   }
 

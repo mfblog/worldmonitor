@@ -53,6 +53,7 @@
     "desktop:package": "node scripts/desktop-package.mjs"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.66.0",
     "@playwright/test": "^1.52.0",
     "@tauri-apps/cli": "^2.10.0",
     "@types/canvas-confetti": "^1.9.0",

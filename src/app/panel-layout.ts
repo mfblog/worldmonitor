@@ -38,6 +38,8 @@ import {
   TelegramIntelPanel,
   GulfEconomiesPanel,
   WorldClockPanel,
+  AirlineIntelPanel,
+  AviationCommandBar,
 } from '@/components';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
 import { PositiveNewsFeedPanel } from '@/components/PositiveNewsFeedPanel';
@@ -77,6 +79,7 @@ export class PanelLayoutManager implements AppModule {
   private callbacks: PanelLayoutCallbacks;
   private panelDragCleanupHandlers: Array<() => void> = [];
   private criticalBannerEl: HTMLElement | null = null;
+  private aviationCommandBar: AviationCommandBar | null = null;
   private readonly applyTimeRangeFilterDebounced: (() => void) & { cancel(): void };
 
   constructor(ctx: AppContext, callbacks: PanelLayoutCallbacks) {
@@ -109,6 +112,11 @@ export class PanelLayoutManager implements AppModule {
     this.ctx.digestPanel?.destroy();
     this.ctx.speciesPanel?.destroy();
     this.ctx.renewablePanel?.destroy();
+
+    // Clean up aviation components
+    this.aviationCommandBar?.destroy();
+    this.aviationCommandBar = null;
+    this.ctx.panels['airline-intel']?.destroy();
 
     window.removeEventListener('resize', this.ensureCorrectZones);
   }
@@ -302,6 +310,7 @@ export class PanelLayoutManager implements AppModule {
           <div class="map-bottom-grid" id="mapBottomGrid"></div>
         </div>
         <div class="panels-grid" id="panelsGrid"></div>
+        <button class="search-mobile-fab" id="searchMobileFab" aria-label="Search">\u{1F50D}</button>
       </div>
     `;
 
@@ -714,6 +723,13 @@ export class PanelLayoutManager implements AppModule {
     }
 
     this.ctx.panels['world-clock'] = new WorldClockPanel();
+
+    // Airline Intelligence panel (non-happy variants)
+    if (SITE_VARIANT !== 'happy') {
+      this.ctx.panels['airline-intel'] = new AirlineIntelPanel();
+      // Launch the Ctrl+J command bar (attaches global keydown listener)
+      this.aviationCommandBar = new AviationCommandBar();
+    }
 
     if (SITE_VARIANT !== 'happy') {
       if (!this.ctx.panels['gulf-economies']) {
