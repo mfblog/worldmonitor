@@ -874,8 +874,7 @@
         "tradeRoutes": "Ticaret Rotaları",
         "gpsJamming": "GPS JAMMING",
         "dayNight": "Gündüz/Gece",
-        "iranAttacks": "İran Saldırıları",
-        "geopoliticalBoundaries": "Jeopolitik Sınırlar"
+        "iranAttacks": "İran Saldırıları"
       },
       "tooltip": {
         "earthquake": "Deprem",
@@ -1981,19 +1980,6 @@
     },
     "iranEvent": {
       "relatedEvents": "İlgili Olaylar"
-    },
-    "geopoliticalBoundary": {
-      "title": "JEOPOLİTİK SINIR",
-      "established": "KURULDU",
-      "dimensions": "BOYUTLAR",
-      "legalBasis": "HUKUKİ DAYANAK",
-      "parties": "İMZACILAR",
-      "types": {
-        "demilitarized": "ASKERSİZ BÖLGE",
-        "ceasefire": "ATEŞKES HATTI",
-        "disputed": "TARTIŞMALI SINIR",
-        "armistice": "MÜTAREKEHATTİ"
-      }
     }
   },
   "signals": {

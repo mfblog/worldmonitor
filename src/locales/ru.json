@@ -874,8 +874,7 @@
         "tradeRoutes": "Торговые маршруты",
         "gpsJamming": "GPS JAMMING",
         "dayNight": "День/Ночь",
-        "iranAttacks": "Атаки Ирана",
-        "geopoliticalBoundaries": "Геополитические Границы"
+        "iranAttacks": "Атаки Ирана"
       },
       "tooltip": {
         "earthquake": "Землетрясение",
@@ -1981,19 +1980,6 @@
     },
     "iranEvent": {
       "relatedEvents": "Связанные события"
-    },
-    "geopoliticalBoundary": {
-      "title": "ГЕОПОЛИТИЧЕСКАЯ ГРАНИЦА",
-      "established": "УЧРЕЖДЕНА",
-      "dimensions": "РАЗМЕРЫ",
-      "legalBasis": "ПРАВОВАЯ ОСНОВА",
-      "parties": "ПОДПИСАНТЫ",
-      "types": {
-        "demilitarized": "ДЕМИЛИТАРИЗОВАННАЯ ЗОНА",
-        "ceasefire": "ЛИНИЯ ПРЕКРАЩЕНИЯ ОГНЯ",
-        "disputed": "СПОРНАЯ ГРАНИЦА",
-        "armistice": "ЛИНИЯ ПЕРЕМИРИЯ"
-      }
     }
   },
   "signals": {

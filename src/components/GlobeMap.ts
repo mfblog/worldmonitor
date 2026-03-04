@@ -17,7 +17,7 @@
 import Globe from 'globe.gl';
 import { isDesktopRuntime } from '@/services/runtime';
 import type { GlobeInstance, ConfigOptions } from 'globe.gl';
-import { INTEL_HOTSPOTS, CONFLICT_ZONES, GEOPOLITICAL_BOUNDARIES, MILITARY_BASES, NUCLEAR_FACILITIES, SPACEPORTS, ECONOMIC_CENTERS, STRATEGIC_WATERWAYS, CRITICAL_MINERALS, UNDERSEA_CABLES } from '@/config/geo';
+import { INTEL_HOTSPOTS, CONFLICT_ZONES, MILITARY_BASES, NUCLEAR_FACILITIES, SPACEPORTS, ECONOMIC_CENTERS, STRATEGIC_WATERWAYS, CRITICAL_MINERALS, UNDERSEA_CABLES } from '@/config/geo';
 import { PIPELINES } from '@/config/pipelines';
 import { t } from '@/services/i18n';
 import { SITE_VARIANT } from '@/config/variant';
@@ -284,10 +284,10 @@ interface GlobePath {
 interface GlobePolygon {
   coords: number[][][];
   name: string;
-  _kind: 'boundary' | 'cii' | 'conflict';
+  _kind: 'cii' | 'conflict';
   level?: string;
   score?: number;
-  boundaryType?: string;
+
   intensity?: string;
   parties?: string[];
   casualties?: string;
@@ -1215,13 +1215,7 @@ export class GlobeMap {
     if (!this.globe || !this.initialized || this.destroyed) return;
     const polys: GlobePolygon[] = [];
 
-    if (this.layers.geopoliticalBoundaries) {
-      for (const b of GEOPOLITICAL_BOUNDARIES) {
-        // Reverse winding for globe.gl: CCW → CW to render polygon interior, not complement
-        const reversed = b.coords.slice().reverse();
-        polys.push({ coords: [reversed], name: b.name, _kind: 'boundary', boundaryType: b.boundaryType });
-      }
-    }
+
 
     if (this.layers.conflicts) {
       // Map conflict zone IDs to ISO-2 country codes for real GeoJSON geometry lookup.

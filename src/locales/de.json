@@ -749,8 +749,7 @@
         "tradeRoutes": "Handelsrouten",
         "iranAttacks": "Iran-Angriffe",
         "gpsJamming": "GPS JAMMING",
-        "dayNight": "Tag/Nacht",
-        "geopoliticalBoundaries": "Geopolitische Grenzen"
+        "dayNight": "Tag/Nacht"
       },
       "layersTitle": "Schichten",
       "layerGuide": "Ebenenführer",
@@ -1985,19 +1984,6 @@
       "uae_ecsr": "VAE/ECSR",
       "venezuela_crisis": "Venezuela-Krise",
       "yemen_houthis": "Jemen/Houthis"
-    },
-    "geopoliticalBoundary": {
-      "title": "GEOPOLITISCHE GRENZE",
-      "established": "ERRICHTET",
-      "dimensions": "ABMESSUNGEN",
-      "legalBasis": "RECHTSGRUNDLAGE",
-      "parties": "UNTERZEICHNER",
-      "types": {
-        "demilitarized": "ENTMILITARISIERTE ZONE",
-        "ceasefire": "WAFFENSTILLSTANDSLINIE",
-        "disputed": "UMSTRITTENE GRENZE",
-        "armistice": "WAFFENSTILLSTANDSLINIE"
-      }
     }
   },
   "signals": {

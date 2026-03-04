@@ -874,8 +874,7 @@
         "tradeRoutes": "Εμπορικές Διαδρομές",
         "gpsJamming": "GPS JAMMING",
         "dayNight": "Ημέρα/Νύχτα",
-        "iranAttacks": "Επιθέσεις Ιράν",
-        "geopoliticalBoundaries": "Γεωπολιτικά Σύνορα"
+        "iranAttacks": "Επιθέσεις Ιράν"
       },
       "tooltip": {
         "earthquake": "Σεισμός",
@@ -1981,19 +1980,6 @@
     },
     "iranEvent": {
       "relatedEvents": "Σχετικά Συμβάντα"
-    },
-    "geopoliticalBoundary": {
-      "title": "ΓΕΩΠΟΛΙΤΙΚΑ ΣΥΝΟΡΑ",
-      "established": "ΙΔΡΥΘΗΚΕ",
-      "dimensions": "ΔΙΑΣΤΑΣΕΙΣ",
-      "legalBasis": "ΝΟΜΙΚΗ ΒΑΣΗ",
-      "parties": "ΥΠΟΓΡΑΦΟΝΤΕΣ",
-      "types": {
-        "demilitarized": "ΑΠΟΣΤΡΑΤΙΚΟΠΟΙΗΜΕΝΗ ΖΩΝΗ",
-        "ceasefire": "ΓΡΑΜΜΗ ΕΚΕΧΕΙΡΙΑΣ",
-        "disputed": "ΑΜΦΙΣΒΗΤΟΥΜΕΝΑ ΣΥΝΟΡΑ",
-        "armistice": "ΓΡΑΜΜΗ ΑΝΑΚΩΧΗΣ"
-      }
     }
   },
   "signals": {
