@@ -534,7 +534,8 @@ export class DeckGLMap {
       if (Math.abs(delta) > 1e-6) {
         this.correctingCenter = true;
         const c = this.maplibreMap.getCenter();
-        this.maplibreMap.jumpTo({ center: [c.lng, c.lat + delta] });
+        const clampedLat = Math.max(-90, Math.min(90, c.lat + delta));
+        this.maplibreMap.jumpTo({ center: [c.lng, clampedLat] });
         this.correctingCenter = false;
         // Do NOT update savedTopLat — keep the original mousedown position
         // so every frame targets the exact same geographic anchor.

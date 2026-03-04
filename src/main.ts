@@ -166,6 +166,7 @@ Sentry.init({
     /\$ is not defined/,
     /Qt\(\) is not a function/,
     /out of memory/,
+    /Could not connect to the server/,
   ],
   beforeSend(event) {
     const msg = event.exception?.values?.[0]?.value ?? '';

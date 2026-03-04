@@ -1650,6 +1650,7 @@
       "confirmTitle": "Confirm",
       "restoreDefaults": "Restore default channels",
       "availableChannels": "Available channels",
+      "noResults": "No channels found matching \"{{term}}\"",
       "customChannel": "Custom channel",
       "regionAll": "All",
       "regionNorthAmerica": "North America",
