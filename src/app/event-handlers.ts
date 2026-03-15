@@ -8,6 +8,7 @@ import {
   PlaybackControl,
   StatusPanel,
   PizzIntIndicator,
+  LlmStatusIndicator,
   CIIPanel,
   PredictionPanel,
 } from '@/components';
@@ -29,6 +30,7 @@ import {
   DEFAULT_PANELS,
 } from '@/config';
 import { VARIANT_META } from '@/config/variant-meta';
+import { isDesktopRuntime } from '@/services/runtime';
 import {
   saveSnapshot,
   initAisStream,
@@ -85,6 +87,9 @@ export class EventHandlerManager implements AppModule {
   private boundMapResizeVisChangeHandler: (() => void) | null = null;
   private boundMapFullscreenEscHandler: ((e: KeyboardEvent) => void) | null = null;
   private boundMobileMenuKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private boundPanelCloseHandler: ((e: Event) => void) | null = null;
+  private boundUndoHandler: ((e: KeyboardEvent) => void) | null = null;
+  private closedPanelStack: string[] = []; // max-items: 20
   private idleTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private snapshotIntervalId: ReturnType<typeof setInterval> | null = null;
   private clockIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -96,6 +101,12 @@ export class EventHandlerManager implements AppModule {
     try { history.replaceState(null, '', shareUrl); } catch { }
   }, 250);
 
+  private readonly debouncedWebcamReload = debounce(() => {
+    if (this.ctx.mapLayers?.webcams) {
+      this.callbacks.loadDataForLayer('webcams');
+    }
+  }, 350);
+
   constructor(ctx: AppContext, callbacks: EventHandlerCallbacks) {
     this.ctx = ctx;
     this.callbacks = callbacks;
@@ -105,6 +116,24 @@ export class EventHandlerManager implements AppModule {
     this.setupEventListeners();
     this.setupIdleDetection();
     this.setupTvMode();
+  }
+
+  private performUndo(): void {
+    const panelId = this.closedPanelStack.pop();
+    if (!panelId) return;
+    const config = this.ctx.panelSettings[panelId];
+    if (!config) return;
+    config.enabled = true;
+    trackPanelToggled(panelId, true);
+    saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
+    this.applyPanelSettings();
+    this.ctx.unifiedSettings?.refreshPanelToggles();
+
+    // Ensure restored panel fetches fresh data (otherwise it may show no content)
+    const panel = this.ctx.panels[panelId];
+    if (panel && 'fetchData' in panel) {
+      (panel as any).fetchData();
+    }
   }
 
   private setupTvMode(): void {
@@ -151,6 +180,7 @@ export class EventHandlerManager implements AppModule {
 
   destroy(): void {
     this.debouncedUrlSync.cancel();
+    this.debouncedWebcamReload.cancel();
     if (this.boundFullscreenHandler) {
       document.removeEventListener('fullscreenchange', this.boundFullscreenHandler);
       this.boundFullscreenHandler = null;
@@ -230,6 +260,14 @@ export class EventHandlerManager implements AppModule {
       document.removeEventListener('keydown', this.boundMobileMenuKeyHandler);
       this.boundMobileMenuKeyHandler = null;
     }
+    if (this.boundPanelCloseHandler) {
+      this.ctx.container.removeEventListener('wm:panel-close', this.boundPanelCloseHandler);
+      this.boundPanelCloseHandler = null;
+    }
+    if (this.boundUndoHandler) {
+      document.removeEventListener('keydown', this.boundUndoHandler);
+      this.boundUndoHandler = null;
+    }
     this.ctx.tvMode?.destroy();
     this.ctx.tvMode = null;
     this.ctx.unifiedSettings?.destroy();
@@ -277,12 +315,32 @@ export class EventHandlerManager implements AppModule {
     };
     window.addEventListener('storage', this.boundStorageHandler);
 
-    document.getElementById('headerThemeToggle')?.addEventListener('click', () => {
-      const next = getCurrentTheme() === 'dark' ? 'light' : 'dark';
-      setTheme(next);
-      this.updateHeaderThemeIcon();
-      trackThemeChanged(next);
-    });
+    // Handle panel close (X) button clicks
+    this.boundPanelCloseHandler = ((e: CustomEvent<{ panelId: string }>) => {
+      const { panelId } = e.detail;
+      const config = this.ctx.panelSettings[panelId];
+      if (!config) return;
+      config.enabled = false;
+      trackPanelToggled(panelId, false);
+      saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
+      this.applyPanelSettings();
+      this.ctx.unifiedSettings?.refreshPanelToggles();
+      // push to undo stack (cap size for memory safety)
+      this.closedPanelStack.push(panelId);
+      if (this.closedPanelStack.length > 20) this.closedPanelStack.shift();
+    }) as EventListener;
+    this.ctx.container.addEventListener('wm:panel-close', this.boundPanelCloseHandler);
+
+    // undo via Ctrl/Cmd+Z
+    this.boundUndoHandler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return;
+        e.preventDefault();
+        this.performUndo();
+      }
+    };
+    document.addEventListener('keydown', this.boundUndoHandler);
 
     const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     this.ctx.container.querySelectorAll<HTMLAnchorElement>('.variant-option').forEach(link => {
@@ -303,6 +361,7 @@ export class EventHandlerManager implements AppModule {
       this.boundFullscreenHandler = () => {
         fullscreenBtn.textContent = document.fullscreenElement ? '\u26F6' : '\u26F6';
         fullscreenBtn.classList.toggle('active', !!document.fullscreenElement);
+        this.syncMapAfterLayoutChange();
       };
       document.addEventListener('fullscreenchange', this.boundFullscreenHandler);
     }
@@ -338,14 +397,13 @@ export class EventHandlerManager implements AppModule {
     document.addEventListener('visibilitychange', this.boundVisibilityHandler);
 
     this.boundFocalPointsReadyHandler = () => {
-      (this.ctx.panels['cii'] as CIIPanel)?.refresh(true);
+      (this.ctx.panels.cii as CIIPanel)?.refresh(true);
       this.callbacks.refreshOpenCountryBrief?.();
     };
     window.addEventListener('focal-points-ready', this.boundFocalPointsReadyHandler);
 
     this.boundThemeChangedHandler = () => {
       this.ctx.map?.render();
-      this.updateHeaderThemeIcon();
       this.updateMobileMenuThemeItem();
     };
     window.addEventListener('theme-changed', this.boundThemeChangedHandler);
@@ -416,7 +474,6 @@ export class EventHandlerManager implements AppModule {
       this.closeMobileMenu();
       const next = getCurrentTheme() === 'dark' ? 'light' : 'dark';
       setTheme(next);
-      this.updateHeaderThemeIcon();
       trackThemeChanged(next);
     });
 
@@ -533,6 +590,7 @@ export class EventHandlerManager implements AppModule {
           regionSelect.value = state.view;
         }
       }
+      this.debouncedWebcamReload();
     });
     this.debouncedUrlSync();
   }
@@ -666,10 +724,35 @@ export class EventHandlerManager implements AppModule {
     }, 1500);
   }
 
+  private getFullscreenDocument(): Document & {
+    webkitFullscreenElement?: Element | null;
+    webkitExitFullscreen?: () => Promise<void> | void;
+  } {
+    return document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => Promise<void> | void;
+    };
+  }
+
+  private syncMapAfterLayoutChange(delayMs = 320): void {
+    const sync = () => {
+      this.ctx.map?.setIsResizing(false);
+      this.ctx.map?.resize();
+    };
+
+    requestAnimationFrame(sync);
+    window.setTimeout(sync, delayMs);
+  }
+
   private async exitFullscreenForNavigation(): Promise<void> {
-    if (!document.fullscreenElement) return;
+    const fullscreenDocument = this.getFullscreenDocument();
+    if (!fullscreenDocument.fullscreenElement && !fullscreenDocument.webkitFullscreenElement) return;
     try {
-      await document.exitFullscreen?.();
+      if (typeof fullscreenDocument.exitFullscreen === 'function') {
+        await fullscreenDocument.exitFullscreen();
+        return;
+      }
+      await fullscreenDocument.webkitExitFullscreen?.();
     } catch { /* proceed with navigation regardless */ }
   }
 
@@ -691,8 +774,14 @@ export class EventHandlerManager implements AppModule {
   }
 
   toggleFullscreen(): void {
-    if (document.fullscreenElement) {
-      try { void document.exitFullscreen()?.catch(() => { }); } catch { }
+    const fullscreenDocument = this.getFullscreenDocument();
+    if (fullscreenDocument.fullscreenElement || fullscreenDocument.webkitFullscreenElement) {
+      try {
+        const exitResult = typeof fullscreenDocument.exitFullscreen === 'function'
+          ? fullscreenDocument.exitFullscreen()
+          : fullscreenDocument.webkitExitFullscreen?.();
+        void Promise.resolve(exitResult).catch(() => { });
+      } catch { }
     } else {
       const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
       if (el.requestFullscreen) {
@@ -701,15 +790,6 @@ export class EventHandlerManager implements AppModule {
         try { el.webkitRequestFullscreen(); } catch { }
       }
     }
-  }
-
-  updateHeaderThemeIcon(): void {
-    const btn = document.getElementById('headerThemeToggle');
-    if (!btn) return;
-    const isDark = getCurrentTheme() === 'dark';
-    btn.innerHTML = isDark
-      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
-      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>';
   }
 
   private updateMobileMenuThemeItem(): void {
@@ -743,6 +823,15 @@ export class EventHandlerManager implements AppModule {
     const headerLeft = this.ctx.container.querySelector('.header-left');
     if (headerLeft) {
       headerLeft.appendChild(this.ctx.pizzintIndicator.getElement());
+    }
+  }
+
+  setupLlmStatusIndicator(): void {
+    if (!isDesktopRuntime()) return;
+    this.ctx.llmStatusIndicator = new LlmStatusIndicator();
+    const headerRight = this.ctx.container.querySelector('.header-right');
+    if (headerRight) {
+      headerRight.appendChild(this.ctx.llmStatusIndicator.getElement());
     }
   }
 
@@ -883,7 +972,7 @@ export class EventHandlerManager implements AppModule {
       liquidity: 0,
     }));
     this.ctx.latestPredictions = predictions;
-    (this.ctx.panels['polymarket'] as PredictionPanel | undefined)?.renderPredictions(predictions);
+    (this.ctx.panels.polymarket as PredictionPanel | undefined)?.renderPredictions(predictions);
 
     this.ctx.map?.setHotspotLevels(snapshot.hotspotLevels);
   }
@@ -1150,8 +1239,7 @@ export class EventHandlerManager implements AppModule {
       document.body.classList.toggle('live-news-fullscreen-active', isFullscreen);
       btn.innerHTML = isFullscreen ? shrinkSvg : expandSvg;
       btn.title = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
-      // Notify map so globe (and deck.gl) can resize after CSS transition completes
-      setTimeout(() => this.ctx.map?.setIsResizing(false), 320);
+      this.syncMapAfterLayoutChange();
     };
 
     btn.addEventListener('click', toggle);

@@ -170,8 +170,9 @@ export async function withRetry(fn, maxRetries = 3, delayMs = 1000) {
     } catch (err) {
       lastErr = err;
       if (attempt < maxRetries) {
-        const wait = delayMs * Math.pow(2, attempt);
-        console.warn(`  Retry ${attempt + 1}/${maxRetries} in ${wait}ms: ${err.message || err}`);
+        const wait = delayMs * 2 ** attempt;
+        const cause = err.cause ? ` (cause: ${err.cause.message || err.cause.code || err.cause})` : '';
+        console.warn(`  Retry ${attempt + 1}/${maxRetries} in ${wait}ms: ${err.message || err}${cause}`);
         await new Promise(r => setTimeout(r, wait));
       }
     }
@@ -205,8 +206,45 @@ export async function writeExtraKey(key, data, ttl) {
     body: JSON.stringify(['SET', key, payload, 'EX', ttl]),
     signal: AbortSignal.timeout(10_000),
   });
-  if (!resp.ok) console.warn(`  Extra key ${key}: write failed (HTTP ${resp.status})`);
-  else console.log(`  Extra key ${key}: written`);
+  if (!resp.ok) throw new Error(`Extra key ${key}: write failed (HTTP ${resp.status})`);
+  console.log(`  Extra key ${key}: written`);
+}
+
+export async function writeExtraKeyWithMeta(key, data, ttl, recordCount, metaKeyOverride) {
+  await writeExtraKey(key, data, ttl);
+  const { url, token } = getRedisCredentials();
+  const metaKey = metaKeyOverride || `seed-meta:${key.replace(/:v\d+$/, '')}`;
+  const meta = { fetchedAt: Date.now(), recordCount: recordCount ?? 0 };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(['SET', metaKey, JSON.stringify(meta), 'EX', 86400 * 7]),
+    signal: AbortSignal.timeout(5_000),
+  });
+  if (!resp.ok) console.warn(`  seed-meta ${metaKey}: write failed`);
+}
+
+export async function extendExistingTtl(keys, ttlSeconds = 600) {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) {
+    console.error('  Cannot extend TTL: missing Redis credentials');
+    return;
+  }
+  try {
+    const pipeline = keys.map(k => ['EXPIRE', k, ttlSeconds]);
+    const resp = await fetch(`${url}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(pipeline),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (resp.ok) {
+      console.log(`  Extended TTL on ${keys.length} existing key(s) (${ttlSeconds}s)`);
+    }
+  } catch (e) {
+    console.error(`  TTL extension failed: ${e.message}`);
+  }
 }
 
 export function sleep(ms) {
@@ -228,7 +266,7 @@ export function parseYahooChart(data, symbol) {
 }
 
 export async function runSeed(domain, resource, canonicalKey, fetchFn, opts = {}) {
-  const { validateFn, ttlSeconds, lockTtlMs = 120_000, extraKeys } = opts;
+  const { validateFn, ttlSeconds, lockTtlMs = 120_000, extraKeys, afterPublish } = opts;
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const startMs = Date.now();
 
@@ -243,8 +281,27 @@ export async function runSeed(domain, resource, canonicalKey, fetchFn, opts = {}
     process.exit(0);
   }
 
+  // Phase 1: Fetch data (graceful on failure — extend TTL on stale data)
+  let data;
   try {
-    const data = await withRetry(fetchFn);
+    data = await withRetry(fetchFn);
+  } catch (err) {
+    await releaseLock(`${domain}:${resource}`, runId);
+    const durationMs = Date.now() - startMs;
+    const cause = err.cause ? ` (cause: ${err.cause.message || err.cause.code || err.cause})` : '';
+    console.error(`  FETCH FAILED: ${err.message || err}${cause}`);
+
+    const ttl = ttlSeconds || 600;
+    const keys = [canonicalKey];
+    if (extraKeys) keys.push(...extraKeys.map(ek => ek.key));
+    await extendExistingTtl(keys, ttl);
+
+    console.log(`\n=== Failed gracefully (${Math.round(durationMs)}ms) ===`);
+    process.exit(0);
+  }
+
+  // Phase 2: Publish to Redis (rethrow on failure — data was fetched but not stored)
+  try {
     const publishResult = await atomicPublish(canonicalKey, data, validateFn, ttlSeconds);
     if (publishResult.skipped) {
       const durationMs = Date.now() - startMs;
@@ -254,8 +311,15 @@ export async function runSeed(domain, resource, canonicalKey, fetchFn, opts = {}
       process.exit(0);
     }
     const { payloadBytes } = publishResult;
-    const recordCount = Array.isArray(data) ? data.length
-      : (data?.events?.length ?? data?.earthquakes?.length ?? data?.outages?.length
+    const topicArticleCount = Array.isArray(data?.topics)
+      ? data.topics.reduce((n, t) => n + (t?.articles?.length || t?.events?.length || 0), 0)
+      : undefined;
+    const recordCount = opts.recordCount != null
+      ? (typeof opts.recordCount === 'function' ? opts.recordCount(data) : opts.recordCount)
+      : Array.isArray(data) ? data.length
+      : (topicArticleCount
+        ?? data?.predictions?.length
+        ?? data?.events?.length ?? data?.earthquakes?.length ?? data?.outages?.length
         ?? data?.fireDetections?.length ?? data?.anomalies?.length ?? data?.threats?.length
         ?? data?.quotes?.length ?? data?.stablecoins?.length
         ?? data?.cables?.length ?? 0);
@@ -267,17 +331,30 @@ export async function runSeed(domain, resource, canonicalKey, fetchFn, opts = {}
       }
     }
 
+    if (afterPublish) {
+      await afterPublish(data, { canonicalKey, ttlSeconds, recordCount, runId });
+    }
+
     const meta = await writeFreshnessMetadata(domain, resource, recordCount, opts.sourceVersion);
 
     const durationMs = Date.now() - startMs;
     logSeedResult(domain, recordCount, durationMs, { payloadBytes });
 
-    // Verify
-    const verified = await verifySeedKey(canonicalKey);
+    // Verify (best-effort: write already succeeded, don't fail the job on transient read issues)
+    let verified = false;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        verified = !!(await verifySeedKey(canonicalKey));
+        if (verified) break;
+        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+      } catch {
+        if (attempt === 0) await new Promise(r => setTimeout(r, 500));
+      }
+    }
     if (verified) {
       console.log(`  Verified: data present in Redis`);
     } else {
-      console.warn('  WARNING: verification read returned null');
+      console.warn(`  WARNING: verification read returned null for ${canonicalKey} (write succeeded, may be transient)`);
     }
 
     console.log(`\n=== Done (${Math.round(durationMs)}ms) ===`);

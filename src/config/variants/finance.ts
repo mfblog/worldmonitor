@@ -176,6 +176,7 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
 
+
   conflicts: false,
   bases: false,
   cables: true,
@@ -227,12 +228,14 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 // Mobile defaults for finance variant
 export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
+
 
   conflicts: false,
   bases: false,
@@ -285,6 +288,7 @@ export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 export const VARIANT_CONFIG: VariantConfig = {

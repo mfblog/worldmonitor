@@ -41,6 +41,8 @@ import type { RenewableInstallation } from '@/services/renewable-installations';
 import type { GpsJamHex } from '@/services/gps-interference';
 import type { SatellitePosition } from '@/services/satellites';
 import type { IranEvent } from '@/services/conflict';
+import type { ImageryScene } from '@/generated/server/worldmonitor/imagery/v1/service_server';
+import type { WebcamEntry, WebcamCluster } from '@/generated/client/worldmonitor/webcam/v1/service_client';
 
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
 export type MapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
@@ -93,6 +95,7 @@ export class MapContainer {
   private cachedOnCountryClicked: ((country: CountryClickPayload) => void) | null = null;
   private cachedOnHotspotClicked: ((hotspot: Hotspot) => void) | null = null;
   private cachedOnAircraftPositionsUpdate: ((positions: PositionSample[]) => void) | null = null;
+  private cachedOnMapContextMenu: ((payload: { lat: number; lon: number; screenX: number; screenY: number }) => void) | null = null;
 
   // ─── Data cache (survives map mode switches) ───────────────────────────────
   private cachedEarthquakes: Earthquake[] | null = null;
@@ -130,6 +133,8 @@ export class MapContainer {
   private cachedHotspotActivity: NewsItem[] | null = null;
   private cachedEscalationFlights: MilitaryFlight[] | null = null;
   private cachedEscalationVessels: MilitaryVessel[] | null = null;
+  private cachedImageryScenes: ImageryScene[] | null = null;
+  private cachedWebcams: Array<WebcamEntry | WebcamCluster> | null = null;
 
   constructor(container: HTMLElement, initialState: MapContainerState, preferGlobe = false) {
     this.container = container;
@@ -258,6 +263,7 @@ export class MapContainer {
     if (this.cachedOnCountryClicked) this.onCountryClicked(this.cachedOnCountryClicked);
     if (this.cachedOnHotspotClicked) this.onHotspotClicked(this.cachedOnHotspotClicked);
     if (this.cachedOnAircraftPositionsUpdate) this.setOnAircraftPositionsUpdate(this.cachedOnAircraftPositionsUpdate);
+    if (this.cachedOnMapContextMenu) this.onMapContextMenu(this.cachedOnMapContextMenu);
 
     // 2. Re-push all cached data
     if (this.cachedEarthquakes) this.setEarthquakes(this.cachedEarthquakes);
@@ -290,6 +296,12 @@ export class MapContainer {
     if (this.cachedRenewableInstallations) this.setRenewableInstallations(this.cachedRenewableInstallations);
     if (this.cachedHotspotActivity) this.updateHotspotActivity(this.cachedHotspotActivity);
     if (this.cachedEscalationFlights && this.cachedEscalationVessels) this.updateMilitaryForEscalation(this.cachedEscalationFlights, this.cachedEscalationVessels);
+    if (this.cachedImageryScenes) this.setImageryScenes(this.cachedImageryScenes);
+    if (this.cachedWebcams) {
+      if (this.useGlobe) this.globeMap?.setWebcams(this.cachedWebcams);
+      else if (this.useDeckGL) this.deckGLMap?.setWebcams(this.cachedWebcams);
+      else this.svgMap?.setWebcams(this.cachedWebcams);
+    }
   }
 
   public isGlobeMode(): boolean {
@@ -389,6 +401,19 @@ export class MapContainer {
     if (this.useDeckGL) { this.deckGLMap?.setEarthquakes(earthquakes); } else { this.svgMap?.setEarthquakes(earthquakes); }
   }
 
+  public setImageryScenes(scenes: ImageryScene[]): void {
+    this.cachedImageryScenes = scenes;
+    if (this.useGlobe) { this.globeMap?.setImageryScenes(scenes); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setImageryScenes(scenes); }
+  }
+
+  public setWebcams(markers: Array<WebcamEntry | WebcamCluster>): void {
+    this.cachedWebcams = markers;
+    if (this.useGlobe) { this.globeMap?.setWebcams(markers); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setWebcams(markers); }
+    else { this.svgMap?.setWebcams(markers); }
+  }
+
   public setWeatherAlerts(alerts: WeatherAlert[]): void {
     this.cachedWeatherAlerts = alerts;
     if (this.useGlobe) { this.globeMap?.setWeatherAlerts(alerts); return; }
@@ -472,7 +497,7 @@ export class MapContainer {
   public setMilitaryVessels(vessels: MilitaryVessel[], clusters: MilitaryVesselCluster[] = []): void {
     this.cachedMilitaryVessels = vessels;
     this.cachedMilitaryVesselClusters = clusters;
-    if (this.useGlobe) { this.globeMap?.setMilitaryVessels(vessels); return; }
+    if (this.useGlobe) { this.globeMap?.setMilitaryVessels(vessels, clusters); return; }
     if (this.useDeckGL) { this.deckGLMap?.setMilitaryVessels(vessels, clusters); } else { this.svgMap?.setMilitaryVessels(vessels, clusters); }
   }
 
@@ -681,6 +706,12 @@ export class MapContainer {
     }
   }
 
+  public getBbox(): string | null {
+    if (this.useDeckGL) return this.deckGLMap?.getBbox() ?? null;
+    if (this.useGlobe) return this.globeMap?.getBbox() ?? null;
+    return null;
+  }
+
   public onStateChanged(callback: (state: MapContainerState) => void): void {
     this.cachedOnStateChanged = callback;
     if (this.useGlobe) { this.globeMap?.onStateChanged(callback); return; }
@@ -840,6 +871,12 @@ export class MapContainer {
     if (this.useDeckGL) { this.deckGLMap?.setOnCountryClick(callback); } else { this.svgMap?.setOnCountryClick(callback); }
   }
 
+  public onMapContextMenu(callback: (payload: { lat: number; lon: number; screenX: number; screenY: number }) => void): void {
+    this.cachedOnMapContextMenu = callback;
+    if (this.useGlobe) { this.globeMap?.setOnMapContextMenu(callback); return; }
+    if (this.useDeckGL) { this.deckGLMap?.setOnMapContextMenu(callback); }
+  }
+
   public fitCountry(code: string): void {
     if (this.useGlobe) { this.globeMap?.fitCountry(code); return; }
     if (this.useDeckGL) {
@@ -891,6 +928,7 @@ export class MapContainer {
     this.cachedOnCountryClicked = null;
     this.cachedOnHotspotClicked = null;
     this.cachedOnAircraftPositionsUpdate = null;
+    this.cachedOnMapContextMenu = null;
     this.cachedEarthquakes = null;
     this.cachedWeatherAlerts = null;
     this.cachedOutages = null;
@@ -926,5 +964,6 @@ export class MapContainer {
     this.cachedHotspotActivity = null;
     this.cachedEscalationFlights = null;
     this.cachedEscalationVessels = null;
+    this.cachedImageryScenes = null;
   }
 }

@@ -122,6 +122,17 @@
       "sirens24h": "صفارات / 24 ساعة",
       "aviationDisruptions": "اضطرابات الطيران",
       "gpsJammingZones": "مناطق تشويش GPS"
+    },
+    "countryFacts": "حقائق عن البلد",
+    "loadingFacts": "جارٍ تحميل حقائق البلد...",
+    "noFacts": "حقائق البلد غير متوفرة.",
+    "facts": {
+      "headOfState": "رئيس الدولة",
+      "population": "عدد السكان",
+      "capital": "العاصمة",
+      "languages": "اللغات",
+      "currencies": "العملات",
+      "area": "المساحة"
     }
   },
   "header": {
@@ -259,7 +270,8 @@
     "techReadiness": "مؤشر الجاهزية التقنية",
     "gccInvestments": "استثمارات دول الخليج",
     "geoHubs": "مراكز جيوسياسية",
-    "liveWebcams": "كاميرات مباشرة",
+    "liveYouTube": "كاميرات مباشرة",
+    "pinnedWebcams": "Pinned Webcams",
     "securityAdvisories": "تنبيهات أمنية",
     "orefSirens": "Israel Sirens",
     "telegramIntel": "استخبارات Telegram",
@@ -778,7 +790,10 @@
       "yes": "نعم",
       "no": "لا",
       "vol": "الحجم",
-      "closes": "يغلق"
+      "closes": "يغلق",
+      "leanYes": "Lean Yes",
+      "leanNo": "Lean No",
+      "tossUp": "Toss-up"
     },
     "stablecoins": {
       "pegHealth": "صحة الربط",
@@ -955,6 +970,7 @@
       "layerWarningDismiss": "لا تظهر هذا مجددًا",
       "layerWarningOk": "فهمت",
       "layersTitle": "الطبقات",
+      "layerSearch": "بحث في الطبقات...",
       "timeAll": "الكل",
       "views": {
         "global": "عالمي",
@@ -1413,7 +1429,9 @@
       "filterAlerts": "تنبيهات",
       "filterOsint": "OSINT",
       "filterPolitics": "سياسة",
-      "filterMiddleeast": "الشرق الأوسط"
+      "filterMiddleeast": "الشرق الأوسط",
+      "live": "مباشر",
+      "viewSource": "عرض المصدر"
     },
     "investments": {
       "infoTooltip": "قاعدة بيانات الاستثمارات الأجنبية المباشرة للمملكة العربية السعودية والإمارات في البنية التحتية الحيوية العالمية. انقر على صف للانتقال إلى موقع الاستثمار على الخريطة.",
@@ -1651,6 +1669,13 @@
     "supplyChain": {
       "chokepoints": "نقاط الاختناق",
       "fredKeyMissing": "مفتاح FRED API مطلوب لأسعار الشحن — أضفه في الإعدادات. نقاط الاختناق والمعادن متاحة بدون مفتاح.",
+      "routingAction": "Routing",
+      "disruption": "Disruption",
+      "vessels": "vessels",
+      "incidents7d": "incidents (7d)",
+      "corridorDisruption": "Corridor Disruption",
+      "corridor": "Corridor",
+      "loadingCorridors": "Loading corridor data...",
       "mineral": "المعدن",
       "minerals": "المعادن",
       "noChokepoints": "جارٍ تحميل بيانات نقاط الاختناق...",
@@ -1761,7 +1786,9 @@
       "sources": {
         "faa": "FAA ASWS",
         "eurocontrol": "Eurocontrol",
-        "computed": "محسوب"
+        "computed": "محسوب",
+        "aviationstack": "Flight Data",
+        "notam": "NOTAM"
       },
       "regions": {
         "americas": "الأمريكتان",
@@ -2052,7 +2079,12 @@
       "usniIntel": "USNI Intel",
       "usniSource": "Source: USNI News Fleet Tracker",
       "approximatePosition": "Position approximate — based on USNI weekly report, not real-time AIS.",
-      "darkDescription": "⚠ السفينة أصبحت مظلمة - فُقدت إشارة AIS. قد يشير إلى عمليات حساسة."
+      "darkDescription": "⚠ السفينة أصبحت مظلمة - فُقدت إشارة AIS. قد يشير إلى عمليات حساسة.",
+      "recentTracking": "Recent Tracking",
+      "lastReport": "LATEST",
+      "nearChokepoint": "NEAR CHOKEPOINT",
+      "nearBase": "NEAR BASE",
+      "lastSeen": "LAST SEEN"
     },
     "militaryCluster": {
       "flightActivity": {
@@ -2366,5 +2398,9 @@
     "mapThemeDesc": "النمط البصري لبلاطات الخريطة.",
     "globePreset": "الإعداد البصري",
     "globePresetDesc": "التبديل بين المرئيات الكلاسيكية والمحسنة للكرة الأرضية."
+  },
+  "contextMenu": {
+    "openCountryBrief": "فتح ملخص البلد",
+    "copyCoordinates": "نسخ الإحداثيات"
   }
 }

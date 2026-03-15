@@ -11,7 +11,7 @@
 // - Historical Pass Log: which sats passed over a location in the last 24h
 //   (useful for identifying imaging windows after events)
 
-import { getApiBaseUrl } from '@/services/runtime';
+import { toApiUrl } from '@/services/runtime';
 import { twoline2satrec, propagate, eciToGeodetic, gstime, degreesLong, degreesLat } from 'satellite.js';
 import type { SatRec } from 'satellite.js';
 
@@ -33,6 +33,7 @@ export interface SatellitePosition {
   type: string;
   country: string;
   velocity: number;
+  inclination: number;
   trail: [number, number, number][];
 }
 
@@ -56,8 +57,7 @@ export async function fetchSatelliteTLEs(): Promise<SatelliteTLE[] | null> {
   if (cachedData && now - cachedAt < CACHE_TTL) return cachedData;
 
   try {
-    const base = getApiBaseUrl();
-    const resp = await fetch(`${base}/api/satellites`, {
+    const resp = await fetch(toApiUrl('/api/satellites'), {
       signal: AbortSignal.timeout(20_000),
     });
     if (!resp.ok) return cachedData;
@@ -127,7 +127,8 @@ export function propagatePositions(satRecs: SatRecEntry[], date?: Date): Satelli
         } catch { /* skip */ }
       }
 
-      positions.push({ ...meta, lat, lng, alt, velocity, trail });
+      const inclination = satrec.inclo * (180 / Math.PI);
+      positions.push({ ...meta, lat, lng, alt, velocity, inclination, trail });
     } catch { /* skip propagation errors */ }
   }
   return positions;

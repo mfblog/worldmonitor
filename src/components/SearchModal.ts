@@ -586,7 +586,7 @@ export class SearchModal {
 
     this.resultsList.querySelectorAll('.search-result-item').forEach((el) => {
       el.addEventListener('click', () => {
-        const index = parseInt((el as HTMLElement).dataset.index || '0');
+        const index = parseInt((el as HTMLElement).dataset.index || '0', 10);
         this.selectResult(index);
       });
     });

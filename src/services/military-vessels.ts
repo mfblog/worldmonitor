@@ -296,7 +296,7 @@ function getVesselTypeFromAis(shipType: number): MilitaryVesselType | undefined 
  */
 function getNearbyBase(lat: number, lon: number): string | undefined {
   for (const base of NAVAL_BASES) {
-    const distance = Math.sqrt(Math.pow(lat - base.lat, 2) + Math.pow(lon - base.lon, 2));
+    const distance = Math.sqrt((lat - base.lat) ** 2 + (lon - base.lon) ** 2);
     if (distance <= 0.5) { // Within ~50km
       return base.name;
     }
@@ -309,7 +309,7 @@ function getNearbyBase(lat: number, lon: number): string | undefined {
  */
 function getNearbyChokepoint(lat: number, lon: number): string | undefined {
   for (const chokepoint of NAVAL_CHOKEPOINTS) {
-    const distance = Math.sqrt(Math.pow(lat - chokepoint.lat, 2) + Math.pow(lon - chokepoint.lon, 2));
+    const distance = Math.sqrt((lat - chokepoint.lat) ** 2 + (lon - chokepoint.lon) ** 2);
     if (distance <= chokepoint.radius) {
       return chokepoint.name;
     }
@@ -451,7 +451,7 @@ function clusterVessels(vessels: MilitaryVessel[]): MilitaryVesselCluster[] {
   for (const hotspot of MILITARY_HOTSPOTS) {
     const nearbyVessels = vessels.filter((v) => {
       if (processed.has(v.id)) return false;
-      const distance = Math.sqrt(Math.pow(v.lat - hotspot.lat, 2) + Math.pow(v.lon - hotspot.lon, 2));
+      const distance = Math.sqrt((v.lat - hotspot.lat) ** 2 + (v.lon - hotspot.lon) ** 2);
       return distance <= hotspot.radius;
     });
 
@@ -616,7 +616,7 @@ export function getVesselByMmsi(mmsi: string): MilitaryVessel | undefined {
 export function getVesselsNearLocation(lat: number, lon: number, radiusDeg: number = 2): MilitaryVessel[] {
   const result: MilitaryVessel[] = [];
   for (const vessel of trackedVessels.values()) {
-    const distance = Math.sqrt(Math.pow(vessel.lat - lat, 2) + Math.pow(vessel.lon - lon, 2));
+    const distance = Math.sqrt((vessel.lat - lat) ** 2 + (vessel.lon - lon) ** 2);
     if (distance <= radiusDeg) {
       result.push(vessel);
     }

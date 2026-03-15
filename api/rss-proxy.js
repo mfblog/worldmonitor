@@ -29,6 +29,12 @@ const RELAY_ONLY_DOMAINS = new Set([
   'www.atlanticcouncil.org',
 ]);
 
+const DIRECT_FETCH_HEADERS = Object.freeze({
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+});
+
 async function fetchViaRailway(feedUrl, timeoutMs) {
   const relayBaseUrl = getRelayBaseUrl();
   if (!relayBaseUrl) return null;
@@ -43,6 +49,12 @@ async function fetchViaRailway(feedUrl, timeoutMs) {
 
 // Allowed RSS feed domains — shared source of truth (shared/rss-allowed-domains.js)
 const ALLOWED_DOMAINS = RSS_ALLOWED_DOMAINS;
+
+function isAllowedDomain(hostname) {
+  const bare = hostname.replace(/^www\./, '');
+  const withWww = hostname.startsWith('www.') ? hostname : `www.${hostname}`;
+  return ALLOWED_DOMAINS.includes(hostname) || ALLOWED_DOMAINS.includes(bare) || ALLOWED_DOMAINS.includes(withWww);
+}
 
 export default async function handler(req) {
   const corsHeaders = getCorsHeaders(req, 'GET, OPTIONS');
@@ -91,9 +103,7 @@ export default async function handler(req) {
 
     // Security: Check if domain is allowed (normalize www prefix)
     const hostname = parsedUrl.hostname;
-    const bare = hostname.replace(/^www\./, '');
-    const withWww = hostname.startsWith('www.') ? hostname : `www.${hostname}`;
-    if (!ALLOWED_DOMAINS.includes(hostname) && !ALLOWED_DOMAINS.includes(bare) && !ALLOWED_DOMAINS.includes(withWww)) {
+    if (!isAllowedDomain(hostname)) {
       return new Response(JSON.stringify({ error: 'Domain not allowed' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -108,11 +118,7 @@ export default async function handler(req) {
 
     const fetchDirect = async () => {
       const response = await fetchWithTimeout(feedUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/rss+xml, application/xml, text/xml, */*',
-          'Accept-Language': 'en-US,en;q=0.9',
-        },
+        headers: DIRECT_FETCH_HEADERS,
         redirect: 'manual',
       }, timeout);
 
@@ -124,21 +130,11 @@ export default async function handler(req) {
           // canonical redirects (e.g. bbc.co.uk → www.bbc.co.uk) are not
           // incorrectly rejected when only one form is in the allowlist.
           const rHost = redirectUrl.hostname;
-          const rBare = rHost.replace(/^www\./, '');
-          const rWithWww = rHost.startsWith('www.') ? rHost : `www.${rHost}`;
-          if (
-            !ALLOWED_DOMAINS.includes(rHost) &&
-            !ALLOWED_DOMAINS.includes(rBare) &&
-            !ALLOWED_DOMAINS.includes(rWithWww)
-          ) {
+          if (!isAllowedDomain(rHost)) {
             throw new Error('Redirect to disallowed domain');
           }
           return fetchWithTimeout(redirectUrl.href, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'application/rss+xml, application/xml, text/xml, */*',
-              'Accept-Language': 'en-US,en;q=0.9',
-            },
+            headers: DIRECT_FETCH_HEADERS,
           }, timeout);
         }
       }
@@ -165,7 +161,7 @@ export default async function handler(req) {
 
       if (!response.ok && !usedRelay) {
         const relayResponse = await fetchViaRailway(feedUrl, timeout);
-        if (relayResponse && relayResponse.ok) {
+        if (relayResponse?.ok) {
           response = relayResponse;
         }
       }

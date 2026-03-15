@@ -242,7 +242,7 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('FATAL:', err.message || err);
+  const _cause = err.cause ? ` (cause: ${err.cause.message || err.cause.code || err.cause})` : ''; console.error('FATAL:', (err.message || err) + _cause);
   // Exit gracefully for cron — crashing restarts the container unnecessarily.
   // The health endpoint will flag stale data via seed-meta.
   process.exit(0);

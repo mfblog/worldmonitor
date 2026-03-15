@@ -5,39 +5,9 @@
  */
 
 import { getCSSColor } from '@/utils';
+import type { DataSourceId } from '@/types';
 
-export type DataSourceId =
-  | 'acled'      // Protests/conflicts
-  | 'opensky'    // Military flights
-  | 'wingbits'   // Aircraft enrichment
-  | 'ais'        // Vessel tracking
-  | 'usgs'       // Earthquakes
-  | 'gdelt'      // News velocity
-  | 'gdelt_doc'  // GDELT Doc protest intelligence
-  | 'rss'        // RSS feeds
-  | 'polymarket' // Prediction markets
-  | 'predictions' // Predictions feed
-  | 'pizzint'    // PizzINT monitoring
-  | 'outages'    // Internet outages
-  | 'cyber_threats' // Cyber threat IOC layer
-  | 'weather'    // Weather alerts
-  | 'economic'   // Economic indicators (FRED)
-  | 'oil'        // EIA oil analytics
-  | 'spending'        // USASpending.gov
-  | 'firms'          // NASA FIRMS satellite fires
-  | 'acled_conflict' // ACLED battles/explosions/violence
-  | 'ucdp'           // UCDP conflict classification
-  | 'hapi'           // HDX HAPI aggregated conflict data
-  | 'ucdp_events'    // UCDP georeferenced conflict events
-  | 'unhcr'          // UNHCR displacement data
-  | 'climate'        // Climate anomaly data (Open-Meteo)
-  | 'worldpop'       // WorldPop population exposure
-  | 'giving'         // Global giving activity data
-  | 'bis'            // BIS central bank data
-  | 'wto_trade'      // WTO trade policy data
-  | 'supply_chain'   // Supply chain disruption intelligence
-  | 'security_advisories'  // Government travel/security advisories
-  | 'gpsjam';              // GPS/GNSS interference
+export type { DataSourceId } from '@/types';
 
 export type FreshnessStatus = 'fresh' | 'stale' | 'very_stale' | 'no_data' | 'disabled' | 'error';
 
@@ -105,6 +75,7 @@ const SOURCE_METADATA: Record<DataSourceId, { name: string; requiredForRisk: boo
   supply_chain: { name: 'Supply Chain Intelligence', requiredForRisk: false, panelId: 'supply-chain' },
   security_advisories: { name: 'Security Advisories', requiredForRisk: false, panelId: 'security-advisories' },
   gpsjam: { name: 'GPS/GNSS Interference', requiredForRisk: false, panelId: 'map' },
+  treasury_revenue: { name: 'Treasury Customs Revenue', requiredForRisk: false, panelId: 'trade-policy' },
 };
 
 class DataFreshnessTracker {
@@ -365,6 +336,7 @@ const INTELLIGENCE_GAP_MESSAGES: Record<DataSourceId, string> = {
   supply_chain: 'Supply chain disruption status unavailable—chokepoint monitoring offline',
   security_advisories: 'Government travel advisory data unavailable—security alerts may be missed',
   gpsjam: 'GPS/GNSS interference data unavailable—jamming zones undetected',
+  treasury_revenue: 'US Treasury customs revenue data unavailable',
 };
 
 /**

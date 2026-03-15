@@ -2,6 +2,74 @@
 
 All notable changes to World Monitor are documented here.
 
+## [Unreleased]
+
+### Added
+
+- US Treasury customs revenue in Trade Policy panel with monthly data, FYTD year-over-year comparison, and revenue spike highlighting (#1663)
+- Security advisories gold standard migration: Railway cron seed fetches 24 government RSS feeds hourly, Vercel reads Redis only (#1637)
+- CMD+K full panel coverage: all 55 panels now searchable (was 31), including AI forecasts, correlation panels, webcams, displacement, security advisories (#1656)
+- Chokepoint transit intelligence with 3 free data sources: IMF PortWatch (vessel transit counts), CorridorRisk (risk intelligence), AISStream (24h crossing counter) (#1560)
+- 13 monitored chokepoints (was 6): added Cape of Good Hope, Gibraltar, Bosporus Strait (absorbs Dardanelles), Korea, Dover, Kerch, Lombok (#1560, #1572)
+- Expandable chokepoint cards with TradingView lightweight-charts 180-day time-series (tanker vs cargo) (#1560)
+- Real-time transit counting with enter+dwell+exit crossing detection, 30min cooldown (#1560)
+- PortWatch, CorridorRisk, and transit seed loops on Railway relay (#1560)
+- R2 trace storage for forecast debugging with Cloudflare API upload (#1655)
+
+### Fixed
+
+- Trade Policy panel WTO gate changed from panel-wide to per-tab, so Revenue tab works on desktop without WTO API key (#1663)
+- Conflict-intel seed succeeds without ACLED credentials by accepting empty events when humanitarian/PizzINT data is available (#1651)
+- Seed-forecasts crash from top-level @aws-sdk/client-s3 import resolved with lazy dynamic import (#1654)
+- Bootstrap desktop timeouts restored (5s/8s) while keeping aggressive web timeouts (1.2s/1.8s) (#1653)
+- Service worker navigation reverted to NetworkOnly to prevent stale HTML caching on deploy (#1653)
+- Railway seed watch paths fixed for 5 services (seed-insights, seed-unrest-events, seed-prediction-markets, seed-infra, seed-gpsjam)
+- PortWatch ArcGIS URL, field names, and chokepoint name mappings (#1572)
+
+## [2.6.1] - 2026-03-11
+
+### Highlights
+
+- **Blog Platform** — Astro-powered blog at /blog with 16 SEO-optimized posts, OG images, and site footer (#1401, #1405, #1409)
+- **Country Intelligence** — country facts section with right-click context menu (#1400)
+- **Satellite Imagery Overhaul** — globe-native rendering, outline-only polygons, CSP fixes (#1381, #1385, #1376)
+
+### Added
+
+- Astro blog at /blog with 16 SEO posts and build integration (#1401, #1403)
+- Blog redesign to match /pro page design system (#1405)
+- Blog SEO, OG images, favicon fix, and site footer (#1409)
+- Country facts section and right-click context menu for intel panel (#1400)
+- Satellite imagery panel enabled in orbital surveillance layer (#1375)
+- Globe-native satellite imagery, removed sidebar panel (#1381)
+- Layer search filter with synonym support (#1369)
+- Close buttons on panels and Add Panel block (#1354)
+- Enterprise contact form endpoint (#1365)
+- Commodity and happy variants shown on all header versions (#1407)
+
+### Fixed
+
+- NOTAM closures merged into Aviation layer (#1408)
+- Intel deep dive layout reordered, duplicate headlines removed (#1404)
+- Satellite imagery outline-only polygons to eliminate alpha stacking blue tint (#1385)
+- Enterprise form hardened with mandatory fields and lead qualification (#1382)
+- Country intel silently dismisses when geocode cannot identify a country (#1383)
+- Globe hit targets enlarged for small marker types (#1378)
+- Imagery panel hidden for existing users and viewport refetch deadlock (#1377)
+- CSP violations for satellite preview images (#1376)
+- Safari TypeError filtering and Sentry noise patterns (#1380)
+- Swedish locale 'avbruten' TypeError variant filtered (#1402)
+- Satellite imagery STAC backend fix, merged into Orbital Surveillance (#1364)
+- Aviation "Computed" source replaced with specific labels, reduced cache TTLs (#1374)
+- Close button and hover-pause on all marker tooltips (#1371)
+- Invalid 'satelliteImagery' removed from LAYER_SYNONYMS (#1370)
+- Risk scores seeding gap and seed-meta key mismatch (#1366)
+- Consistent LIVE header pattern across news and webcams panels (#1367)
+- Globe null guards in path accessor callbacks (#1372)
+- Node_modules guard in pre-push hook, pinned Node 22 (#1368)
+- Typecheck CI workflow: removed paths-ignore, added push trigger (#1373)
+- Theme toggle removed from header (#1407)
+
 ## [2.6.0] - 2026-03-09
 
 ### Highlights

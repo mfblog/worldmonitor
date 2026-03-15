@@ -19,7 +19,7 @@ export default async function handler(req) {
 
   const latN = Number(lat);
   const lonN = Number(lon);
-  if (!lat || !lon || isNaN(latN) || isNaN(lonN)
+  if (!lat || !lon || Number.isNaN(latN) || Number.isNaN(lonN)
       || latN < -90 || latN > 90 || lonN < -180 || lonN > 180) {
     return new Response(JSON.stringify({ error: 'valid lat (-90..90) and lon (-180..180) required' }), {
       status: 400,

@@ -139,6 +139,7 @@ const allLayersEnabled: MapLayers = {
   gpsJamming: true,
   satellites: false,
 
+
   conflicts: true,
   bases: true,
   cables: true,
@@ -186,11 +187,13 @@ const allLayersEnabled: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 const allLayersDisabled: MapLayers = {
   gpsJamming: false,
   satellites: false,
+
 
   conflicts: false,
   bases: false,
@@ -239,6 +242,7 @@ const allLayersDisabled: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 const SEEDED_NEWS_LOCATIONS: Array<{
@@ -954,7 +958,7 @@ const seedAllDynamicData = (): void => {
       severity: 'major',
       avgDelayMinutes: 48,
       reason: 'Severe weather',
-      source: 'computed',
+      source: 'aviationstack',
       updatedAt: new Date('2026-02-01T11:00:00.000Z'),
     },
   ];

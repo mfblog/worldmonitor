@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { loadEnvFile, CHROME_UA, getRedisCredentials, acquireLock, releaseLock, withRetry, writeFreshnessMetadata, logSeedResult, verifySeedKey } from './_seed-utils.mjs';
+import { loadEnvFile, CHROME_UA, getRedisCredentials, acquireLock, releaseLock, withRetry, writeFreshnessMetadata, logSeedResult, verifySeedKey, extendExistingTtl } from './_seed-utils.mjs';
+import { summarizeMilitaryTheaters, buildMilitarySurges, appendMilitaryHistory } from './_military-surges.mjs';
 import http from 'node:http';
 import https from 'node:https';
 import tls from 'node:tls';
@@ -13,11 +14,18 @@ const LIVE_TTL = 600;
 const STALE_TTL = 86400;
 
 const THEATER_POSTURE_LIVE_KEY = 'theater-posture:sebuf:v1';
-const THEATER_POSTURE_STALE_KEY = 'theater-posture:sebuf:stale:v1';
+const THEATER_POSTURE_STALE_KEY = 'theater_posture:sebuf:stale:v1';
 const THEATER_POSTURE_BACKUP_KEY = 'theater-posture:sebuf:backup:v1';
 const THEATER_POSTURE_LIVE_TTL = 900;
 const THEATER_POSTURE_STALE_TTL = 86400;
 const THEATER_POSTURE_BACKUP_TTL = 604800;
+const MILITARY_SURGES_LIVE_KEY = 'military:surges:v1';
+const MILITARY_SURGES_STALE_KEY = 'military:surges:stale:v1';
+const MILITARY_SURGES_HISTORY_KEY = 'military:surges:history:v1';
+const MILITARY_SURGES_LIVE_TTL = 900;
+const MILITARY_SURGES_STALE_TTL = 86400;
+const MILITARY_SURGES_HISTORY_TTL = 604800;
+const MILITARY_SURGES_HISTORY_MAX = 72;
 
 // ── Proxy Config ─────────────────────────────────────────
 const OPENSKY_PROXY_AUTH = process.env.OPENSKY_PROXY_AUTH || process.env.OREF_PROXY_AUTH || '';
@@ -614,7 +622,18 @@ async function redisSet(url, token, key, value, ttl) {
     body: JSON.stringify(cmd),
     signal: AbortSignal.timeout(10_000),
   });
-  return resp.ok;
+  if (!resp.ok) throw new Error(`Redis SET ${key} failed: HTTP ${resp.status}`);
+}
+
+async function redisGet(url, token, key) {
+  const resp = await fetch(`${url}/get/${encodeURIComponent(key)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  if (!data?.result) return null;
+  try { return JSON.parse(data.result); } catch { return null; }
 }
 
 // ── Main ───────────────────────────────────────────────────
@@ -631,25 +650,39 @@ async function main() {
     process.exit(0);
   }
 
+  let allStates, source, flights, byType;
   try {
     console.log('  Fetching from all sources...');
-    const { allStates, source } = await fetchAllStates();
+    ({ allStates, source } = await fetchAllStates());
     console.log(`  Raw states: ${allStates.length} (source: ${source})`);
 
-    const { flights, byType } = filterMilitaryFlights(allStates);
+    ({ flights, byType } = filterMilitaryFlights(allStates));
     console.log(`  Military: ${flights.length} (${Object.entries(byType).map(([t, n]) => `${t}:${n}`).join(', ')})`);
+  } catch (err) {
+    await releaseLock('military:flights', runId);
+    console.error(`  FETCH FAILED: ${err.message || err}`);
+    await extendExistingTtl([LIVE_KEY], LIVE_TTL);
+    await extendExistingTtl([STALE_KEY, THEATER_POSTURE_STALE_KEY, MILITARY_SURGES_STALE_KEY], STALE_TTL);
+    await extendExistingTtl([THEATER_POSTURE_LIVE_KEY], THEATER_POSTURE_LIVE_TTL);
+    await extendExistingTtl([THEATER_POSTURE_BACKUP_KEY], THEATER_POSTURE_BACKUP_TTL);
+    await extendExistingTtl([MILITARY_SURGES_LIVE_KEY], MILITARY_SURGES_LIVE_TTL);
+    console.log(`\n=== Failed gracefully (${Math.round(Date.now() - startMs)}ms) ===`);
+    process.exit(0);
+  }
 
-    if (flights.length === 0) {
-      console.log('  SKIPPED: 0 military flights — preserving stale data');
-      process.exit(0);
-    }
+  if (flights.length === 0) {
+    console.log('  SKIPPED: 0 military flights — preserving stale data');
+    await releaseLock('military:flights', runId);
+    process.exit(0);
+  }
 
+  try {
     const payload = { flights, fetchedAt: Date.now(), stats: { total: flights.length, byType } };
 
-    const ok1 = await redisSet(url, token, LIVE_KEY, payload, LIVE_TTL);
-    const ok2 = await redisSet(url, token, STALE_KEY, payload, STALE_TTL);
-    console.log(`  ${LIVE_KEY}: ${ok1 ? 'written' : 'FAILED'}`);
-    console.log(`  ${STALE_KEY}: ${ok2 ? 'written' : 'FAILED'}`);
+    await redisSet(url, token, LIVE_KEY, payload, LIVE_TTL);
+    await redisSet(url, token, STALE_KEY, payload, STALE_TTL);
+    console.log(`  ${LIVE_KEY}: written`);
+    console.log(`  ${STALE_KEY}: written`);
 
     await writeFreshnessMetadata('military', 'flights', flights.length, source);
 
@@ -665,12 +698,36 @@ async function main() {
     }));
     const theaters = calculateTheaterPostures(theaterFlights);
     const posturePayload = { theaters };
-    const tp1 = await redisSet(url, token, THEATER_POSTURE_LIVE_KEY, posturePayload, THEATER_POSTURE_LIVE_TTL);
-    const tp2 = await redisSet(url, token, THEATER_POSTURE_STALE_KEY, posturePayload, THEATER_POSTURE_STALE_TTL);
-    const tp3 = await redisSet(url, token, THEATER_POSTURE_BACKUP_KEY, posturePayload, THEATER_POSTURE_BACKUP_TTL);
+    await redisSet(url, token, THEATER_POSTURE_LIVE_KEY, posturePayload, THEATER_POSTURE_LIVE_TTL);
+    await redisSet(url, token, THEATER_POSTURE_STALE_KEY, posturePayload, THEATER_POSTURE_STALE_TTL);
+    await redisSet(url, token, THEATER_POSTURE_BACKUP_KEY, posturePayload, THEATER_POSTURE_BACKUP_TTL);
     await redisSet(url, token, 'seed-meta:theater-posture', { fetchedAt: Date.now(), recordCount: theaterFlights.length, sourceVersion: source || '' }, 604800);
     const elevated = theaters.filter((t) => t.postureLevel !== 'normal').length;
-    console.log(`  Theater posture: ${theaters.length} theaters (${elevated} elevated), redis: ${tp1 && tp2 && tp3 ? 'OK' : 'PARTIAL'}`);
+    console.log(`  Theater posture: ${theaters.length} theaters (${elevated} elevated)`);
+
+    const priorSurgeHistory = ((await redisGet(url, token, MILITARY_SURGES_HISTORY_KEY))?.history || []);
+    const theaterActivity = summarizeMilitaryTheaters(flights, POSTURE_THEATERS);
+    const surges = buildMilitarySurges(theaterActivity, priorSurgeHistory, { sourceVersion: source || '' });
+    const surgePayload = {
+      surges,
+      theaters: theaterActivity,
+      fetchedAt: Date.now(),
+      sourceVersion: source || '',
+    };
+    const surgeHistory = appendMilitaryHistory(priorSurgeHistory, {
+      assessedAt: Date.now(),
+      sourceVersion: source || '',
+      theaters: theaterActivity,
+    }, MILITARY_SURGES_HISTORY_MAX);
+    await redisSet(url, token, MILITARY_SURGES_LIVE_KEY, surgePayload, MILITARY_SURGES_LIVE_TTL);
+    await redisSet(url, token, MILITARY_SURGES_STALE_KEY, surgePayload, MILITARY_SURGES_STALE_TTL);
+    await redisSet(url, token, MILITARY_SURGES_HISTORY_KEY, { history: surgeHistory }, MILITARY_SURGES_HISTORY_TTL);
+    await redisSet(url, token, 'seed-meta:military-surges', {
+      fetchedAt: Date.now(),
+      recordCount: surges.length,
+      sourceVersion: source || '',
+    }, 604800);
+    console.log(`  Military surges: ${surges.length} detected (history: ${surgeHistory.length} runs)`);
 
     const durationMs = Date.now() - startMs;
     logSeedResult('military', flights.length, durationMs);
@@ -681,6 +738,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('FATAL:', err.message || err);
+  console.error(`PUBLISH FAILED: ${err.message || err}`);
   process.exit(1);
 });

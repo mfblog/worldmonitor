@@ -76,7 +76,7 @@ export class SignalModal {
       if (target.classList.contains('location-link')) {
         const lat = parseFloat(target.dataset.lat || '0');
         const lon = parseFloat(target.dataset.lon || '0');
-        if (this.onLocationClick && !isNaN(lat) && !isNaN(lon)) {
+        if (this.onLocationClick && !Number.isNaN(lat) && !Number.isNaN(lon)) {
           this.onLocationClick(lat, lon);
           this.hide();
         }

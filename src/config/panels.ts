@@ -1,6 +1,6 @@
-import type { PanelConfig, MapLayers } from '@/types';
-import type { DataSourceId } from '@/services/data-freshness';
+import type { PanelConfig, MapLayers, DataSourceId } from '@/types';
 import { SITE_VARIANT } from './variant';
+// boundary-ignore: isDesktopRuntime is a pure env probe with no service dependencies
 import { isDesktopRuntime } from '@/services/runtime';
 
 const _desktop = isDesktopRuntime();
@@ -14,13 +14,19 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   map: { name: 'Global Map', enabled: true, priority: 1 },
   'live-news': { name: 'Live News', enabled: true, priority: 1 },
   'live-webcams': { name: 'Live Webcams', enabled: true, priority: 1 },
+  'windy-webcams': { name: 'Windy Live Webcam', enabled: false, priority: 2 },
   insights: { name: 'AI Insights', enabled: true, priority: 1 },
   'strategic-posture': { name: 'AI Strategic Posture', enabled: true, priority: 1 },
+  forecast: { name: 'AI Forecasts', enabled: true, priority: 1, ...(_desktop && { premium: 'locked' as const }) }, // trial: unlocked on web, locked on desktop
   cii: { name: 'Country Instability', enabled: true, priority: 1, ...(_desktop && { premium: 'enhanced' as const }) },
   'strategic-risk': { name: 'Strategic Risk Overview', enabled: true, priority: 1, ...(_desktop && { premium: 'enhanced' as const }) },
   intel: { name: 'Intel Feed', enabled: true, priority: 1 },
   'gdelt-intel': { name: 'Live Intelligence', enabled: true, priority: 1, ...(_desktop && { premium: 'enhanced' as const }) },
   cascade: { name: 'Infrastructure Cascade', enabled: true, priority: 1 },
+  'military-correlation': { name: 'Force Posture', enabled: true, priority: 2 },
+  'escalation-correlation': { name: 'Escalation Monitor', enabled: true, priority: 2 },
+  'economic-correlation': { name: 'Economic Warfare', enabled: true, priority: 2 },
+  'disaster-correlation': { name: 'Disaster Cascade', enabled: true, priority: 2 },
   politics: { name: 'World News', enabled: true, priority: 1 },
   us: { name: 'United States', enabled: true, priority: 1 },
   europe: { name: 'Europe', enabled: true, priority: 1 },
@@ -63,12 +69,13 @@ const FULL_PANELS: Record<string, PanelConfig> = {
 };
 
 const FULL_MAP_LAYERS: MapLayers = {
-  iranAttacks: _desktop ? false : true,
+  iranAttacks: !_desktop,
   gpsJamming: false,
   satellites: false,
 
+
   conflicts: true,
-  bases: _desktop ? false : true,
+  bases: !_desktop,
   cables: false,
   pipelines: false,
   hotspots: true,
@@ -118,12 +125,14 @@ const FULL_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 const FULL_MOBILE_MAP_LAYERS: MapLayers = {
   iranAttacks: true,
   gpsJamming: false,
   satellites: false,
+
 
   conflicts: true,
   bases: false,
@@ -176,6 +185,7 @@ const FULL_MOBILE_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 // ============================================
@@ -185,6 +195,7 @@ const TECH_PANELS: Record<string, PanelConfig> = {
   map: { name: 'Global Tech Map', enabled: true, priority: 1 },
   'live-news': { name: 'Tech Headlines', enabled: true, priority: 1 },
   'live-webcams': { name: 'Live Webcams', enabled: true, priority: 2 },
+  'windy-webcams': { name: 'Windy Live Webcam', enabled: false, priority: 2 },
   insights: { name: 'AI Insights', enabled: true, priority: 1 },
   ai: { name: 'AI/ML News', enabled: true, priority: 1 },
   tech: { name: 'Technology', enabled: true, priority: 1 },
@@ -223,6 +234,7 @@ const TECH_PANELS: Record<string, PanelConfig> = {
 const TECH_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
+
 
   conflicts: false,
   bases: false,
@@ -276,11 +288,13 @@ const TECH_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 const TECH_MOBILE_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
+
 
   conflicts: false,
   bases: false,
@@ -334,6 +348,7 @@ const TECH_MOBILE_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 // ============================================
@@ -343,6 +358,7 @@ const FINANCE_PANELS: Record<string, PanelConfig> = {
   map: { name: 'Global Markets Map', enabled: true, priority: 1 },
   'live-news': { name: 'Market Headlines', enabled: true, priority: 1 },
   'live-webcams': { name: 'Live Webcams', enabled: true, priority: 2 },
+  'windy-webcams': { name: 'Windy Live Webcam', enabled: false, priority: 2 },
   insights: { name: 'AI Market Insights', enabled: true, priority: 1 },
   markets: { name: 'Live Markets', enabled: true, priority: 1 },
   'stock-analysis': { name: 'Premium Stock Analysis', enabled: true, priority: 1, premium: 'locked' },
@@ -382,6 +398,7 @@ const FINANCE_PANELS: Record<string, PanelConfig> = {
 const FINANCE_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
+
 
   conflicts: false,
   bases: false,
@@ -435,11 +452,13 @@ const FINANCE_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 const FINANCE_MOBILE_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
+
 
   conflicts: false,
   bases: false,
@@ -493,6 +512,7 @@ const FINANCE_MOBILE_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 // ============================================
@@ -515,6 +535,7 @@ const HAPPY_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
 
+
   conflicts: false,
   bases: false,
   cables: false,
@@ -567,12 +588,14 @@ const HAPPY_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 const HAPPY_MOBILE_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
 
+
   conflicts: false,
   bases: false,
   cables: false,
@@ -625,6 +648,7 @@ const HAPPY_MOBILE_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  webcams: false,
 };
 
 // ============================================
@@ -652,7 +676,6 @@ const COMMODITY_PANELS: Record<string, PanelConfig> = {
   'gulf-economies': { name: 'Gulf & OPEC Economies', enabled: true, priority: 1 },
   'gcc-investments': { name: 'GCC Resource Investments', enabled: true, priority: 2 },
   'airline-intel': { name: 'Airline Intelligence', enabled: true, priority: 2 },
-  finance: { name: 'Financial News', enabled: true, priority: 2 },
   polymarket: { name: 'Commodity Predictions', enabled: true, priority: 2 },
   'world-clock': { name: 'World Clock', enabled: true, priority: 2 },
   monitors: { name: 'My Monitors', enabled: true, priority: 2 },
@@ -661,6 +684,7 @@ const COMMODITY_PANELS: Record<string, PanelConfig> = {
 const COMMODITY_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
+
 
   conflicts: false,
   bases: false,
@@ -714,11 +738,13 @@ const COMMODITY_MAP_LAYERS: MapLayers = {
   miningSites: true,
   processingPlants: true,
   commodityPorts: true,
+  webcams: false,
 };
 
 const COMMODITY_MOBILE_MAP_LAYERS: MapLayers = {
   gpsJamming: false,
   satellites: false,
+
 
   conflicts: false,
   bases: false,
@@ -772,6 +798,7 @@ const COMMODITY_MOBILE_MAP_LAYERS: MapLayers = {
   miningSites: true,
   processingPlants: false,
   commodityPorts: true,
+  webcams: false,
 };
 
 // ============================================
@@ -832,13 +859,18 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   // All variants — essential panels
   core: {
     labelKey: 'header.panelCatCore',
-    panelKeys: ['map', 'live-news', 'live-webcams', 'insights', 'strategic-posture'],
+    panelKeys: ['map', 'live-news', 'live-webcams', 'windy-webcams', 'insights', 'strategic-posture'],
   },
 
   // Full (geopolitical) variant
   intelligence: {
     labelKey: 'header.panelCatIntelligence',
-    panelKeys: ['cii', 'strategic-risk', 'intel', 'gdelt-intel', 'cascade', 'telegram-intel'],
+    panelKeys: ['cii', 'strategic-risk', 'intel', 'gdelt-intel', 'cascade', 'telegram-intel', 'forecast'],
+    variants: ['full'],
+  },
+  correlation: {
+    labelKey: 'header.panelCatCorrelation',
+    panelKeys: ['military-correlation', 'escalation-correlation', 'economic-correlation', 'disaster-correlation'],
     variants: ['full'],
   },
   regionalNews: {
@@ -919,6 +951,35 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
     labelKey: 'header.panelCatGulfMena',
     panelKeys: ['gulf-economies', 'gcc-investments', 'gccNews', 'monitors', 'world-clock'],
     variants: ['finance'],
+  },
+
+  // Commodity variant
+  commodityPrices: {
+    labelKey: 'header.panelCatCommodityPrices',
+    panelKeys: ['commodities', 'gold-silver', 'energy', 'base-metals', 'critical-minerals', 'markets', 'heatmap', 'macro-signals'],
+    variants: ['commodity'],
+  },
+  miningIndustry: {
+    labelKey: 'header.panelCatMining',
+    panelKeys: ['commodity-news', 'mining-news', 'mining-companies', 'supply-chain', 'commodity-regulation'],
+    variants: ['commodity'],
+  },
+  commodityEcon: {
+    labelKey: 'header.panelCatCommodityEcon',
+    panelKeys: ['trade-policy', 'economic', 'gulf-economies', 'gcc-investments', 'finance', 'polymarket', 'airline-intel', 'world-clock', 'monitors'],
+    variants: ['commodity'],
+  },
+
+  // Happy variant
+  happyNews: {
+    labelKey: 'header.panelCatHappyNews',
+    panelKeys: ['positive-feed', 'progress', 'counters', 'spotlight', 'breakthroughs', 'digest'],
+    variants: ['happy'],
+  },
+  happyPlanet: {
+    labelKey: 'header.panelCatHappyPlanet',
+    panelKeys: ['species', 'renewable', 'giving'],
+    variants: ['happy'],
   },
 };
 

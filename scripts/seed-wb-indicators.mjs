@@ -119,7 +119,7 @@ async function fetchWithRetry(url, attempt = 1) {
     return resp.json();
   } catch (err) {
     if (attempt < MAX_RETRIES) {
-      const delay = RETRY_BASE_MS * Math.pow(2, attempt - 1);
+      const delay = RETRY_BASE_MS * 2 ** (attempt - 1);
       console.warn(`  Retry ${attempt}/${MAX_RETRIES} for ${url} in ${delay}ms... (${err.message})`);
       await sleep(delay);
       return fetchWithRetry(url, attempt + 1);
@@ -292,7 +292,7 @@ async function fetchProgressData() {
     const data = raw[1]
       .filter(e => e.value !== null && e.value !== undefined)
       .map(e => ({ year: parseInt(e.date, 10), value: e.value }))
-      .filter(d => !isNaN(d.year))
+      .filter(d => !Number.isNaN(d.year))
       .sort((a, b) => a.year - b.year);
 
     console.log(`    → ${data.length} data points`);
@@ -343,7 +343,7 @@ async function fetchRenewableData() {
     arr.sort((a, b) => a.year - b.year);
   }
 
-  const worldData = byRegion['WLD'] || byRegion['1W'] || [];
+  const worldData = byRegion.WLD || byRegion['1W'] || [];
   const latest = worldData.length ? worldData[worldData.length - 1] : null;
 
   const regions = [];

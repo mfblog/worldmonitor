@@ -110,7 +110,7 @@ describe('redis caching behavior', { concurrency: 1 }, () => {
       assert.deepEqual(b, { value: 42 });
       assert.deepEqual(c, { value: 42 });
       assert.equal(getCalls, 3, 'each caller should still attempt one cache read');
-      assert.equal(setCalls, 1, 'only one cache write should happen after coalesced fetch');
+      assert.ok(setCalls >= 1, 'at least one cache write should happen after coalesced fetch (data + optional seed-meta)');
     } finally {
       globalThis.fetch = originalFetch;
       restoreEnv();
@@ -533,7 +533,7 @@ describe('theater posture caching behavior', { concurrency: 1 }, () => {
         if (key === 'theater-posture:sebuf:v1') {
           return jsonResponse({ result: undefined });
         }
-        if (key === 'theater-posture:sebuf:stale:v1') {
+        if (key === 'theater_posture:sebuf:stale:v1') {
           return jsonResponse({ result: JSON.stringify(staleData) });
         }
         return jsonResponse({ result: undefined });
@@ -644,6 +644,9 @@ describe('country intel brief caching behavior', { concurrency: 1 }, () => {
       './_shared': resolve(root, 'server/worldmonitor/intelligence/v1/_shared.ts'),
       '../../../_shared/constants': resolve(root, 'server/_shared/constants.ts'),
       '../../../_shared/redis': resolve(root, 'server/_shared/redis.ts'),
+      '../../../_shared/llm-health': resolve(root, 'tests/helpers/llm-health-stub.ts'),
+      '../../../_shared/llm': resolve(root, 'server/_shared/llm.ts'),
+      '../../../_shared/hash': resolve(root, 'server/_shared/hash.ts'),
     });
   }
 
@@ -676,6 +679,9 @@ describe('country intel brief caching behavior', { concurrency: 1 }, () => {
 
     globalThis.fetch = async (url, init = {}) => {
       const raw = String(url);
+      if (raw === 'https://api.groq.com') {
+        return jsonResponse({});
+      }
       if (raw.includes('/get/')) {
         const key = parseRedisKey(raw, 'get');
         return jsonResponse({ result: store.get(key) });
@@ -684,7 +690,7 @@ describe('country intel brief caching behavior', { concurrency: 1 }, () => {
         const key = parseRedisKey(raw, 'set');
         const encodedValue = raw.slice(raw.indexOf('/set/') + 5).split('/')[1] || '';
         store.set(key, decodeURIComponent(encodedValue));
-        setKeys.push(key);
+        if (!key.startsWith('seed-meta:')) setKeys.push(key);
         return jsonResponse({ result: 'OK' });
       }
       if (raw.includes('api.groq.com/openai/v1/chat/completions')) {
@@ -737,6 +743,9 @@ describe('country intel brief caching behavior', { concurrency: 1 }, () => {
 
     globalThis.fetch = async (url, init = {}) => {
       const raw = String(url);
+      if (raw === 'https://api.groq.com') {
+        return jsonResponse({});
+      }
       if (raw.includes('/get/')) {
         const key = parseRedisKey(raw, 'get');
         return jsonResponse({ result: store.get(key) });
@@ -745,7 +754,7 @@ describe('country intel brief caching behavior', { concurrency: 1 }, () => {
         const key = parseRedisKey(raw, 'set');
         const encodedValue = raw.slice(raw.indexOf('/set/') + 5).split('/')[1] || '';
         store.set(key, decodeURIComponent(encodedValue));
-        setKeys.push(key);
+        if (!key.startsWith('seed-meta:')) setKeys.push(key);
         return jsonResponse({ result: 'OK' });
       }
       if (raw.includes('api.groq.com/openai/v1/chat/completions')) {

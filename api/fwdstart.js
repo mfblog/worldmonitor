@@ -48,7 +48,7 @@ export default async function handler(req) {
       if (dateMatch) {
         const dateStr = `${dateMatch[1]} ${dateMatch[2]}, ${dateMatch[3]}`;
         const parsed = new Date(dateStr);
-        if (!isNaN(parsed.getTime())) {
+        if (!Number.isNaN(parsed.getTime())) {
           pubDate = parsed;
         }
       }

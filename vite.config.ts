@@ -653,7 +653,12 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: ({ request }: { request: Request }) => request.mode === 'navigate',
-            handler: 'NetworkOnly',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-navigation',
+              networkTimeoutSeconds: 5,
+              cacheableResponse: { statuses: [200] },
+            },
           },
           {
             urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
@@ -746,6 +751,9 @@ export default defineConfig({
         'src/shims/child-process-proxy.ts'
       ),
     },
+  },
+  worker: {
+    format: 'es',
   },
   build: {
     // Geospatial bundles (maplibre/deck) are expected to be large even when split.
